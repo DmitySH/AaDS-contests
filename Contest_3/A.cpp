@@ -54,19 +54,23 @@ int main() {
         }
         shift(&vec[0], n);
     }
+
     std::cout << max_delta << std::endl;
-    for (const auto &v : unique_vectors) {
-        if (v.second.first == max_delta) {
-            for (int i = 0; i < n; ++i) {
-                std::cout << v.first[i];
-                if (i != n - 1) {
+    for (int i = 0; i < n; ++i) {
+        if (unique_vectors.count(vec) == 1 && unique_vectors[vec].first == max_delta) {
+            for (int j = 0; j < n; ++j) {
+                std::cout << vec[j];
+                if (j != n - 1) {
                     std::cout << ' ';
                 } else {
-                    std::cout << "; " << v.second.second;
+                    std::cout << "; " << unique_vectors[vec].second;
                 }
             }
+            unique_vectors.erase(vec);
             std::cout << '\n';
         }
+        shift(&vec[0], n);
     }
+
     return 0;
 }

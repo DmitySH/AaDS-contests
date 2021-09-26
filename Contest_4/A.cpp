@@ -2,17 +2,13 @@
 #include <string>
 
 std::string SequenceBuilder(int x, int n) {
-    std::string current_sequence;
-    current_sequence = std::to_string(x);
-    if (n > 1) {
-        current_sequence = "1" + std::to_string(x);
-    }
+    std::string current_sequence = std::to_string(x);
 
-    for (int i = 2; i < n; ++i) {
+    for (int i = 1; i < n; ++i) {
         std::string next_sequence;
         int row_counter = 1;
 
-        for (int j = 1; j < current_sequence.length(); ++j) { // 3 1 1 3
+        for (int j = 1; j < current_sequence.length(); ++j) {
             if (current_sequence[j] == current_sequence[j - 1]) {
                 ++row_counter;
             } else {
@@ -20,7 +16,8 @@ std::string SequenceBuilder(int x, int n) {
                 row_counter = 1;
             }
         }
-        next_sequence += std::to_string(row_counter) + current_sequence[current_sequence.length() - 1];
+        next_sequence += std::to_string(row_counter)
+                + current_sequence[current_sequence.length() - 1];
         current_sequence = next_sequence;
     }
 

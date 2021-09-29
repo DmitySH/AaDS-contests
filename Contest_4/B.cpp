@@ -1,20 +1,24 @@
 #include <iostream>
 #include <string>
 
-std::string MergeStrings(const std::string &str1, const std::string &str2) {
-    std::string max_str = str1.length() > str2.length() ? str1 : str2;
-    std::string min_str = str1 == max_str ? str2 : str1;
+std::string MergeStrings(const std::string &cur_str, const std::string &prev_str) {
+    int max_str_length = cur_str.length() > prev_str.length() ?
+                         cur_str.length() : prev_str.length();
 
-    for (int i = 0; i < min_str.length(); ++i) {
-        if (min_str[i] == '+') {
-            max_str[i] = '+';
+    std::string new_str;
+    for (int i = 0; i < max_str_length; ++i) {
+        if (i < cur_str.length() && cur_str[i] == '|'
+            || i < prev_str.length() && prev_str[i] == '|') {
+            new_str += '+';
+        } else {
+            new_str += '-';
         }
     }
 
-    return max_str;
+    return new_str;
 }
 
-void CreateRow(std::string *prev_line2, int current_row, int total_rows) {
+std::string CreateRow(std::string *prev_line2, int current_row, int total_rows) {
     int m;
     std::cin >> m;
     std::string line1, line2;
@@ -26,13 +30,12 @@ void CreateRow(std::string *prev_line2, int current_row, int total_rows) {
 
         line1 += '+';
         line2 += '|';
-        ++length_of_row;
-        for (int j = 0; j < a; ++j) {
-            line1 += '-';
-            line2 += ' ';
-            ++length_of_row;
-        }
+
+        line1 += std::string(a, '-');
+        line2 += std::string(a, ' ');
+        length_of_row += a;
     }
+
     line1 += '+';
     line2 += '|';
     ++length_of_row;
@@ -42,14 +45,10 @@ void CreateRow(std::string *prev_line2, int current_row, int total_rows) {
         saved_line = line1;
     }
 
-    for (char &sym : *prev_line2) {
-        sym = sym == '|' ? '+' : '-';
-    }
-    line1 = MergeStrings(line1, *prev_line2);
+    line1 = MergeStrings(line2, *prev_line2);
     *prev_line2 = line2;
 
-    std::cout << line1 << std::endl << line2 << std::endl;
-    std::cout << saved_line;
+    return line1 + '\n' + line2 + '\n' + saved_line;
 }
 
 int main() {
@@ -59,9 +58,9 @@ int main() {
     int n;
     std::cin >> n;
 
-    std::string prev_line1;
+    std::string prev_line2;
     for (int i = 0; i < n; ++i) {
-        CreateRow(&prev_line1, i, n);
+        std::cout << CreateRow(&prev_line2, i, n);
     }
 
     return 0;

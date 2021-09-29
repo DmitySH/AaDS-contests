@@ -9,7 +9,7 @@ void CheckSymbols(bool *a, const std::string &str) {
     }
 }
 
-void FindDifference(const std::string &first, const std::string &second) {
+std::string FindDifference(const std::string &first, const std::string &second) {
     const int kAlphabetSize = 26;
 
     bool first_symbols[kAlphabetSize];
@@ -23,17 +23,19 @@ void FindDifference(const std::string &first, const std::string &second) {
     CheckSymbols(first_symbols, first);
     CheckSymbols(second_symbols, second);
 
-    bool equals = true;
+    std::string result;
     for (int i = 0; i < kAlphabetSize; ++i) {
         if (first_symbols[i] && !second_symbols[i] || !first_symbols[i] && second_symbols[i]) {
-            equals = false;
-            std::cout << static_cast<char> (i + 'a') << ' ';
+            result += static_cast<char> (i + 'a');
+            result += ' ';
         }
     }
 
-    if (equals) {
-        std::cout << "NONE";
+    if (result.length() == 0) {
+        result = "NONE";
     }
+
+    return result;
 }
 
 int main() {
@@ -44,7 +46,7 @@ int main() {
     std::getline(std::cin, input_first);
     std::getline(std::cin, input_second);
 
-    FindDifference(input_first, input_second);
+    std::cout << FindDifference(input_first, input_second);
 
     return 0;
 }

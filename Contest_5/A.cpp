@@ -1,12 +1,9 @@
 #include <iostream>
 #include <string>
 
-
 class MyStack {
-
-private:
+ private:
     int size;
-    int *head;
     int capacity;
     int *array;
 
@@ -21,22 +18,19 @@ private:
         array = newArray;
     }
 
-public:
+ public:
     ~MyStack() {
         delete[] array;
-        delete head;
-        head = nullptr;
         array = nullptr;
     }
 
     MyStack() {
-        head = nullptr;
         size = 0;
         capacity = 8;
         array = new int[capacity];
     }
 
-    bool IsEmpty() {
+    bool IsEmpty() const {
         return size == 0;
     }
 
@@ -51,37 +45,71 @@ public:
     }
 
     int Pop() {
-        if (size <= 0) {
-
+        if (IsEmpty()) {
+            throw std::out_of_range("error");
         }
-        int value = array[size];
         --size;
+        int value = array[size];
         return value;
     }
 
     void Clear() {
-        for (int i = 0; i < size; ++i) {
-            array[i] = 0;
-        }
-
         size = 0;
-        std::cout << "ok";
+        capacity = 8;
+
+        delete[] array;
+        array = new int[capacity];
     }
 
     int Back() {
         if (IsEmpty()) {
-
+            throw std::out_of_range("error");
         }
 
-        return array[size];
+        return array[size - 1];
+    }
+
+    int GetSize() const {
+        return size;
     }
 };
+
 
 int main() {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
 
-    
+    std::string input;
+    MyStack stack;
+    std::cin >> input;
+    while (input != "exit") {
+        if (input == "push") {
+            int elem;
+            std::cin >> elem;
+            stack.Push(elem);
+            std::cout << "ok" << std::endl;
+        } else if (input == "pop") {
+            if (!stack.IsEmpty()) {
+                std::cout << stack.Pop() << std::endl;
+            } else {
+                std::cout << "error" << std::endl;
+            }
+        } else if (input == "back") {
+            if (!stack.IsEmpty()) {
+                std::cout << stack.Back() << std::endl;
+            } else {
+                std::cout << "error" << std::endl;
+            }
+        } else if (input == "size") {
+            std::cout << stack.GetSize() << std::endl;
+        } else if (input == "clear") {
+            stack.Clear();
+            std::cout << "ok" << std::endl;
+        }
+
+        std::cin >> input;
+    }
+    std::cout << "bye";
 
     return 0;
 }

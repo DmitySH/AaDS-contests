@@ -1,8 +1,5 @@
-#include <iostream>
-#include <string>
-
 class MyStack {
- private:
+private:
     int size;
     int capacity;
     int *array;
@@ -18,7 +15,7 @@ class MyStack {
         array = newArray;
     }
 
- public:
+public:
     ~MyStack() {
         delete[] array;
         array = nullptr;
@@ -73,41 +70,3 @@ class MyStack {
         return size;
     }
 };
-
-bool IsRightSequence(std::string str) {
-    MyStack stack;
-    for (const char sym : str) {
-        if (sym == '(' || sym == '[' || sym == '{') {
-            stack.Push(sym);
-        } else {
-            if (stack.IsEmpty()) {
-                return false;
-            }
-
-            if (sym == ')' && stack.Back() != '(' || sym == '}' && stack.Back() != '{'
-                || sym == ']' && stack.Back() != '[') {
-                return false;
-            } else {
-                stack.Pop();
-            }
-        }
-    }
-
-    return stack.IsEmpty();
-}
-
-int main() {
-    std::ios_base::sync_with_stdio(false);
-    std::cin.tie(nullptr);
-
-    std::string input_line;
-    std::cin >> input_line;
-
-    if (IsRightSequence(input_line)) {
-        std::cout << "yes";
-    } else {
-        std::cout << "no";
-    }
-
-    return 0;
-}

@@ -12,27 +12,25 @@ std::string MultiplyString(const std::string &str, int repeats) {
 }
 
 std::string UnZip(int repeats, std::string *next_string) {
-    int pos_front = next_string->find('[');
-    int pos_rear = next_string->find_last_of(']');
-
-    if (pos_front == -1) {
-        return MultiplyString(*next_string, repeats);
+    std::string result;
+    bool opened = false;
+    for (int i = 0; i < next_string->length(); ++i) {
+        if ((*next_string)[i] == '[') {
+            opened = true;
+            std::string next = next_string->substr(i + 1);
+            result.pop_back();
+            result += UnZip(static_cast<int> ((*next_string)[i - 1]) - '0', &next);
+        } else if ((*next_string)[i] == ']') {
+            opened = false;
+            return MultiplyString(result, repeats);
+        } else if (!opened) {
+            result += (*next_string)[i];
+        }
     }
 
-    std::string current_string_front = next_string->substr(0, pos_front - 1);
-
-    std::string current_string_rear = next_string->substr(pos_rear + 1);
-
-    int number = static_cast<int> (((*next_string)[pos_front - 1]) - '0');
-
-    *next_string = next_string->substr(pos_front + 1,
-                                     pos_rear - pos_front - 1);
-
-    std::string new_string = current_string_front +
-            UnZip(number, next_string) + current_string_rear;
-
-    return MultiplyString(new_string, repeats);
+    return MultiplyString(result, repeats);
 }
+
 
 int main() {
     std::ios_base::sync_with_stdio(false);
@@ -41,14 +39,20 @@ int main() {
     std::string zipped_string;
     std::cin >> zipped_string;
 
-    int pos_front = zipped_string.find('[');
-    int pos_rear = zipped_string.find_last_of(']');
-
-    int number = static_cast<int> (zipped_string[pos_front - 1] - '0');
-
-    zipped_string = zipped_string.substr(pos_front + 1,
-                                         pos_rear - pos_front - 1);
-
-    std::cout << UnZip(number, &zipped_string);
+    bool opened = false;
+    std::string result;
+    for (int i = 0; i < zipped_string.length(); ++i) {
+        if (zipped_string[i] == '[' && !opened) {
+            opened = true;
+            std::string next = zipped_string.substr(i + 1);
+            result.pop_back();
+            result += UnZip(static_cast<int> (zipped_string[i - 1]) - '0', &next);
+        } else if (zipped_string[i] == ']') {
+            opened = false;
+        } else if (!opened) {
+            result += zipped_string[i];
+        }
+    }
+    std::cout << result;
     return 0;
 }

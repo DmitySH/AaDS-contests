@@ -48,6 +48,7 @@ class MyStack {
         if (IsEmpty()) {
             throw std::out_of_range("error");
         }
+        
         --size;
         int value = array[size];
         return value;

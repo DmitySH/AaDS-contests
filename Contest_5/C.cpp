@@ -1,136 +1,176 @@
 #include <iostream>
 #include <string>
-#include <ctime>
 
-struct Node {
-    int value;
-    Node *next;
-};
-
-class MyQueue {
+class MyDeque {
  private:
-    Node *middle;
-    Node *head;
-    Node *tail;
-    int size;
+  int size;
+  int capacity;
+  int *array;
+  int front_index;
+  int back_index;
 
-    void InitHead(int elem) {
-        head = new Node{elem, nullptr};
-        tail = head;
-        middle = head;
+  void Resize() {
+    int *newArray = new int[capacity * 2];
+    for (int i = capacity / 2; i < capacity * 2 - capacity / 2; ++i) {
+      newArray[i] = array[i - capacity / 2];
     }
+    capacity *= 2;
+
+    delete[] array;
+    array = newArray;
+
+    back_index = capacity / 4 + back_index;
+    front_index = capacity - capacity / 4 - (capacity / 2 - front_index);
+  }
 
  public:
-    MyQueue() {
-        middle = nullptr;
-        tail = nullptr;
-        head = nullptr;
-        size = 0;
+  ~MyDeque() {
+    delete[] array;
+    array = nullptr;
+  }
+
+  MyDeque() {
+    size = 0;
+    capacity = 16;
+    array = new int[capacity];
+    front_index = capacity / 2;
+    back_index = front_index - 1;
+  }
+
+  bool IsEmpty() const {
+    return size == 0;
+  }
+
+  int GetSize() const {
+    return size;
+  }
+
+  void Clear() {
+    size = 0;
+    capacity = 8;
+    front_index = capacity / 2;
+    back_index = front_index - 1;
+
+    delete[] array;
+    array = new int[capacity];
+  }
+
+  void PushFront(int value) {
+    if (front_index >= capacity) {
+      Resize();
+    }
+    array[front_index] = value;
+    ++front_index;
+    ++size;
+  }
+
+  void PushBack(int value) {
+    if (back_index < 0) {
+      Resize();
+    }
+    array[back_index] = value;
+    --back_index;
+    ++size;
+  }
+
+  int Front() {
+    if (IsEmpty()) {
+      throw std::out_of_range("error");
     }
 
-    ~MyQueue() {
-        while (head != nullptr) {
-            Node *current_node = head;
-            head = current_node->next;
-            delete current_node;
-        }
-        head = nullptr;
-        tail = nullptr;
-        middle = nullptr;
+    return array[front_index - 1];
+  }
+
+  int Back() {
+    if (IsEmpty()) {
+      throw std::out_of_range("error");
     }
 
-    void Enqueue(int elem) {
-        if (head == nullptr) {
-            InitHead(elem);
-        } else {
-            tail->next = new Node{elem, nullptr};
-            tail = tail->next;
-        }
-        ++size;
-        if (size % 2 == 1 && size != 1) {
-            middle = middle->next;
-        }
+    return array[back_index + 1];
+  }
+
+  int PopFront() {
+    if (IsEmpty()) {
+      throw std::out_of_range("error");
     }
 
-    void Print() {
-        Node *cur = head;
-        while (cur != nullptr) {
-            std::cout << cur->value << ' ';
-            cur = cur->next;
-        }
-        if (middle != nullptr) {
-            std::cout << " mid = " << middle->value << '\n';
-        }
+    --size;
+    --front_index;
+    int value = array[front_index];
+    return value;
+  }
+
+  int PopBack() {
+    if (IsEmpty()) {
+      throw std::out_of_range("error");
     }
 
-    void SuperEnqueue(int elem) {
-        if (head == nullptr) {
-            InitHead(elem);
-        } else {
-            middle->next = new Node{elem, middle->next};
-        }
-        ++size;
-        if (size % 2 == 1 && size != 1) {
-            middle = middle->next;
-        }
-        if (head == tail && middle->next != nullptr) {
-            tail = middle->next;
-        }
-    }
-
-    int Dequeue() {
-        if (size == 0) {
-            throw std::out_of_range("error");
-        }
-
-        --size;
-        if (size % 2 == 1) {
-            middle = middle->next;
-        }
-
-        int current_value = head->value;
-        if (head == tail) {
-            delete tail;
-            middle = nullptr;
-            head = nullptr;
-            tail = nullptr;
-        } else {
-            Node *current_node = head;
-            head = current_node->next;
-            delete current_node;
-        }
-
-        return current_value;
-    }
+    --size;
+    ++back_index;
+    int value = array[back_index];
+    return value;
+  }
 };
 
+void AddUsualPerson(MyDeque *enter, MyDeque *exit, int *delta, int person) {
+  if (*delta == 1) {
+    exit->PushBack(enter->PopFront());
+    enter->PushBack(person);
+    --(*delta);
+  } else {
+    enter->PushBack(person);
+    ++(*delta);
+  }
+}
+
+void AddSuperPerson(MyDeque *enter, MyDeque *exit, int *delta, int person) {
+  if (*delta == 1) {
+    exit->PushBack(enter->PopFront());
+    enter->PushFront(person);
+    --(*delta);
+  } else {
+    enter->PushFront(person);
+    ++(*delta);
+  }
+}
+
+int ThrowPersonAway(MyDeque *enter, MyDeque *exit, int *delta) {
+  if (*delta == 1) {
+    exit->PushBack(enter->PopFront());
+    --(*delta);
+  } else {
+    ++(*delta);
+  }
+
+  return exit->PopFront();
+}
+
 int main() {
-    std::ios_base::sync_with_stdio(false);
-    std::cin.tie(nullptr);
+  std::ios_base::sync_with_stdio(false);
+  std::cin.tie(nullptr);
 
-    int n;
-    std::cin >> n;
+  int n;
+  std::cin >> n;
 
-    MyQueue queue;
-    clock_t start = clock();
-    for (int i = 0; i < n; ++i) {
-        std::string command;
-        std::cin >> command;
+  MyDeque enter, exit;
+  int delta = 0;
 
-        if (command == "+") {
-            int person;
-            std::cin >> person;
-            queue.Enqueue(person);
-        } else if (command == "*") {
-            int person;
-            std::cin >> person;
-            queue.SuperEnqueue(person);
-        } else if (command == "-") {
-            std::cout << queue.Dequeue() << '\n';
-        }
+  for (int i = 0; i < n; ++i) {
+    std::string command;
+    std::cin >> command;
+
+    if (command == "+") {
+      int person;
+      std::cin >> person;
+      AddUsualPerson(&enter, &exit, &delta, person);
+    } else if (command == "*") {
+      int person;
+      std::cin >> person;
+      AddSuperPerson(&enter, &exit, &delta, person);
+    } else if (command == "-") {
+      std::cout << ThrowPersonAway(&enter, &exit, &delta) << '\n';
     }
-    clock_t end = clock();
-    double seconds = (double)(end - start) / CLOCKS_PER_SEC;
-    std::cout << seconds;
-    return 0;
+  }
+
+  return 0;
 }

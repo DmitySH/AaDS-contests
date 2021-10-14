@@ -13,14 +13,73 @@ private:
     int size_;
     Node *head_, *tail_;
 
+    bool need_to_delete_;
+    // Надо проверить, вызывать ли десутруктор, ибо если он смерженный,
+    // то удаление будет удалять узлы двух дургих листов и будет хаос,
+    // поэтому если лист учавствовал в мерже, то он удалится лишь удалением
+    // смерженного листа.
+
+    void appendNode(Node *next_node) {
+        if (size_ == 0) {
+            head_ = next_node;
+            tail_ = next_node;
+        } else {
+            tail_->next = next_node;
+            tail_ = next_node;
+        }
+
+        ++size_;
+    }
+
 public:
+    static SinglyLinkedList<int> mergeLists(SinglyLinkedList<int> *first_list,
+                                            SinglyLinkedList<int> *second_list) {
+        SinglyLinkedList<int> result;
+
+        Node *first_node = first_list->head_;
+        Node *second_node = second_list->head_;
+
+        while (second_node != nullptr && first_node != nullptr) {
+            int elem_in_first = first_node->value;
+            int elem_in_second = second_node->value;
+
+            if (elem_in_first <= elem_in_second) {
+                result.appendNode(first_node);
+                first_node = first_node->next;
+            } else {
+                result.appendNode(second_node);
+                second_node = second_node->next;
+            }
+        }
+        while (first_node != nullptr) {
+            result.appendNode(first_node);
+            first_node = first_node->next;
+        }
+
+        while (second_node != nullptr) {
+            result.appendNode(second_node);
+            second_node = second_node->next;
+        }
+
+        first_list->need_to_delete_ = false;
+        second_list->need_to_delete_ = false;
+
+        result.tail_->next = nullptr;
+        return result;
+    }
+
     SinglyLinkedList() {
         head_ = nullptr;
         size_ = 0;
         tail_ = nullptr;
+        need_to_delete_ = true;
     }
 
     ~SinglyLinkedList() {
+        if (!need_to_delete_) {
+            return;
+        }
+
         Node *cur = head_;
         while (cur != nullptr) {
             Node *next = cur->next;
@@ -97,36 +156,6 @@ void enterList(SinglyLinkedList<int> *list, int n) {
     }
 }
 
-SinglyLinkedList<int> mergeLists(const SinglyLinkedList<int> &first_list,
-                                 const SinglyLinkedList<int> &second_list) {
-    int first_index = 0, second_index = 0;
-    SinglyLinkedList<int> result;
-
-    while (first_index < first_list.getSize() && second_index < second_list.getSize()) {
-        int elem_in_first = first_list.getElement(first_index);
-        int elem_in_second = second_list.getElement(second_index);
-
-        if (elem_in_first <= elem_in_second) {
-            result.append(elem_in_first);
-            ++first_index;
-        } else {
-            result.append(elem_in_second);
-            ++second_index;
-        }
-    }
-    if (first_index != first_list.getSize()) {
-        for (int i = first_index; i < first_list.getSize(); ++i) {
-            result.append(first_list.getElement(i));
-        }
-    } else {
-        for (int i = second_index; i < second_list.getSize(); ++i) {
-            result.append(second_list.getElement(i));
-        }
-    }
-
-    return result;
-}
-
 int main() {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
@@ -140,7 +169,8 @@ int main() {
     enterList(&first_list, n);
     enterList(&second_list, m);
 
-    SinglyLinkedList<int> merged_list = mergeLists(first_list, second_list);
+    SinglyLinkedList<int> merged_list =
+        SinglyLinkedList<int>::mergeLists(&first_list, &second_list);
     merged_list.print();
     return 0;
 }

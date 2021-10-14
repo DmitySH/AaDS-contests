@@ -36,12 +36,12 @@ public:
             return result;
         }
 
-        result.setHead(new Node{list.getElement(0), nullptr});
+        result.head_ = new Node{list.getElement(0), nullptr};
 
         for (int i = 1; i < list.getSize(); ++i) {
             Node *new_node = new Node{list.getElement(i), nullptr};
-            new_node->next = result.getHead();
-            result.setHead(new_node);
+            new_node->next = result.head_;
+            result.head_ = new_node;
         }
 
         return result;
@@ -100,14 +100,6 @@ public:
             cur->next = new_node;
         }
         ++size_;
-    }
-
-    void setHead(Node *head) {
-        head_ = head;
-    }
-
-    Node *getHead() const {
-        return head_;
     }
 
     int &operator[](const int index) {

@@ -1,116 +1,112 @@
 #include <iostream>
 #include <string>
+#include <cmath>
 
 template <typename T>
-class SinglyLinkedList {
+class Dimon {
     struct Node {
     public:
-        T value;
+        T *arr;
         Node *next;
+        int size;
+        int max_size;
+
+        Node(int arr_size) {
+            arr = new T[arr_size];
+            next = nullptr;
+            max_size = arr_size;
+            size = 0;
+        }
+
+        Node(T *arr, int max_size, int cur_size) {
+            this->arr = arr;
+            next = nullptr;
+            size = cur_size;
+            this->max_size = max_size;
+        }
+
+        ~Node() {
+            delete[] arr;
+            arr = nullptr;
+        }
     };
 
 private:
-    int size_;
-    Node *head_, *tail_;
-
-    void removeFromBack(Node *cur) {
-        if (cur != nullptr) {
-            removeFromBack(cur->next);
-            delete cur;
-        }
-    }
+    int64_t size_;
+    Node *head_;
+    int node_size;
 
 public:
-    SinglyLinkedList() {
+    Dimon() {
         head_ = nullptr;
         size_ = 0;
-        tail_ = nullptr;
+        node_size = 0;
     }
 
-    ~SinglyLinkedList() {
-        removeFromBack(head_);
+    ~Dimon() {
+        //        throw "Destructor";
     }
 
-    int getSize() const {
-        return size_;
-    }
-
-    void append(T value) {
-        Node *new_node = new Node{value, nullptr};
-        if (head_ == nullptr) {
-            head_ = new_node;
-            tail_ = new_node;
-        } else {
-            tail_->next = new_node;
-            tail_ = tail_->next;
-        }
-        ++size_;
-    }
-
-    T getElement(int index) const {
-        if (index >= size_) {
-            throw std::out_of_range("Index error");
-        }
+    void insert(int index, T value) {
         Node *cur = head_;
-        for (int i = 0; i < index; ++i) {
+        --index;
+        while (index - cur->size > 0) {
+            index -= cur->size;
             cur = cur->next;
         }
-        return cur->value;
+        if (cur->size == cur->max_size) {
+            Node *new_node = new Node(node_size);
+            for (int i = cur->max_size / 2; i < cur->max_size; ++i) {
+                new_node->arr[i - cur->max_size / 2] = cur->arr[i];
+            }
+//            cur->arr[cur->max_size / 2] = TODO
+        } else {
+            for (int i = cur->size; i > index; --i) {
+                cur->arr[i] = cur->arr[i - 1];
+            }
+            ++cur->size;
+            cur->arr[index] = value;
+        }
+    }
+
+    void appendArray(T *arr, int size, int max_size) {
+        Node *cur = head_;
+        if (cur == nullptr) {
+            head_ = new Node(arr, max_size, size);
+        } else {
+            while (cur->next != nullptr) {
+                cur = cur->next;
+            }
+
+            cur->next = new Node(arr, max_size, size);
+        }
     }
 
     void print() {
         Node *cur = head_;
         while (cur != nullptr) {
-            std::cout << cur->value << ' ';
+            for (int i = 0; i < cur->size; ++i) {
+                std::cout << cur->arr[i] << ' ';
+            }
             cur = cur->next;
+
+            std::cout << '\n';
         }
-    }
-
-    void insert(int index, T value) {
-        if (index > size_) {
-            throw std::out_of_range("Index error");
-        }
-
-        Node *new_node = new Node{value, nullptr};
-
-        Node *cur = head_;
-        for (int i = 0; i < index; ++i) {
-            cur = cur->next;
-        }
-        new_node->next = cur->next;
-        cur->next = new_node;
-
-        ++size_;
-    }
-
-    int &operator[](const int index) {
-        return getElement(index);
+        std::cout << "Done \n";
     }
 };
-
-void enterList(SinglyLinkedList<int> *list, int n) {
-    for (int i = 0; i < n; ++i) {
-        int elem;
-        std::cin >> elem;
-        list->append(elem);
-    }
-}
-
 
 int main() {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
 
-    int n, m;
-    std::cin >> n >> m;
+    Dimon<int> dimon;
+    dimon.appendArray(new int[2]{1, 2}, 2, 4);
+    dimon.appendArray(new int[1]{3}, 1, 4);
+    dimon.appendArray(new int[3]{5, 6, 7}, 3, 4);
+    dimon.print();
 
-    SinglyLinkedList<int> first_list;
-    SinglyLinkedList<int> second_list;
-
-    enterList(&first_list, n);
-    enterList(&second_list, m);
-
-    SinglyLinkedList<int> merged_list = mergeLists(first_list, second_list);
-    merged_list.print();
+    dimon.insert(6, 10);
+    dimon.print();
     return 0;
 }

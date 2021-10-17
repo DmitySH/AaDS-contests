@@ -7,6 +7,10 @@ class Dimon {
     class SinglyLinkedList {
         struct Node {
         public:
+            Node(T value, Node *next) {
+                this->value = value;
+                this->next = next;
+            }
             T value;
             Node *next;
         };
@@ -39,11 +43,11 @@ class Dimon {
                     ++j;
                     Node *removal_node = cur_node;
                     cur_node = cur_node->next;
-                    delete removal_node;
+                    //                    delete removal_node;
                 }
                 SinglyLinkedList *removal = from;
                 from = from->nextList;
-                delete removal;
+                //                delete removal;
                 if (from != nullptr) {
                     cur_node = from->head_;
                 }
@@ -157,10 +161,7 @@ class Dimon {
         }
 
         void insert(int index, T value) {
-            if (index > size_ || index < 0) {
-                throw std::out_of_range("Index error");
-            }
-            Node *new_node = new Node{value, nullptr};
+            Node *new_node = new Node(value, nullptr);
 
             if (size_ == 0) {
                 head_ = new_node;
@@ -418,11 +419,16 @@ int main() {
     int q;
     std::cin >> q;
     Dimon<int> dimon(arr, n);
+    delete[] arr;
     if (operation == '+') {
         dimon.mod = mod;
     }
 
-    dimon.print();
+    //        for (int i = 0; i < 10; ++i) {
+    //            int r = rand() % (dimon.getSize() + 1) + 1;
+    //            dimon.insert(i + 1, i);
+    //        }
+    //        dimon.print();
     for (int i = 0; i < q; ++i) {
         std::string input;
         std::cin >> input;

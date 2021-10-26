@@ -20,27 +20,26 @@ private:
     int size_;
     int depth_;
 
-    void traverse(Node *cur, T value, int depth) {
+    void insertValue(Node *cur, T value, int depth) {
         ++depth;
-        if (value == cur->value) {
-            return;
-        }
         if (value < cur->value) {
             if (!cur->left) {
+                if (depth > depth_) {
+                    depth_ = depth;
+                }
                 cur->left = new Node{value, nullptr, nullptr};
             } else {
-                traverse(cur->left, value, depth);
+                insertValue(cur->left, value, depth);
             }
-        } else {
+        } else if (value > cur->value) {
             if (!cur->right) {
+                if (depth > depth_) {
+                    depth_ = depth;
+                }
                 cur->right = new Node{value, nullptr, nullptr};
             } else {
-                traverse(cur->right, value, depth);
+                insertValue(cur->right, value, depth);
             }
-        }
-
-        if (depth > depth_) {
-            depth_ = depth;
         }
     }
 
@@ -65,25 +64,31 @@ public:
 
     T max() {
         Node *cur = root_;
-        while (cur->right != nullptr && cur->right->right != nullptr) {
-            cur = cur->right;
-        }
-        Node *max = cur->right == nullptr ? cur : cur->right;
-        if (max->left != nullptr) {
-            cur = max->left;
-            while (cur->right != nullptr) {
+        Node *second_max;
+
+        if (cur->right != nullptr) {
+            while (cur->right->right != nullptr) {
                 cur = cur->right;
             }
-            return cur->value;
+
+            if (cur->right->left != nullptr) {
+                cur = cur->right->left;
+                while (cur->right != nullptr) {
+                    cur = cur->right;
+                }
+                second_max = cur;
+            } else {
+                second_max = cur;
+            }
         } else {
-            if (cur->left != nullptr) {
-                cur = cur->left;
-            }
+            cur = cur->left;
             while (cur->right != nullptr) {
                 cur = cur->right;
             }
-            return cur->value;
+            second_max = cur;
         }
+
+        return second_max->value;
     }
 
     void insert(T value) {
@@ -92,7 +97,7 @@ public:
             ++depth_;
             root_ = new Node{value, nullptr, nullptr};
         } else {
-            traverse(root_, value, 1);
+            insertValue(root_, value, 1);
         }
     }
 };

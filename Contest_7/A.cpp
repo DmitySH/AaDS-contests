@@ -22,25 +22,24 @@ private:
 
     void traverse(Node *cur, T value, int depth) {
         ++depth;
-        if (value == cur->value) {
-            return;
-        }
         if (value < cur->value) {
             if (!cur->left) {
+                if (depth > depth_) {
+                    depth_ = depth;
+                }
                 cur->left = new Node{value, nullptr, nullptr};
             } else {
                 traverse(cur->left, value, depth);
             }
-        } else {
+        } else if (value > cur->value) {
             if (!cur->right) {
+                if (depth > depth_) {
+                    depth_ = depth;
+                }
                 cur->right = new Node{value, nullptr, nullptr};
             } else {
                 traverse(cur->right, value, depth);
             }
-        }
-
-        if (depth > depth_) {
-            depth_ = depth;
         }
     }
 

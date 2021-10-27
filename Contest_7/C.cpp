@@ -1,5 +1,4 @@
 #include <iostream>
-#include <string>
 
 template <typename T>
 class BinarySearchTree {
@@ -46,9 +45,7 @@ private:
     void traverse(Node *cur) {
         if (cur != nullptr) {
             traverse(cur->left);
-            if (cur->right == nullptr && cur->left == nullptr) {
-                std::cout << cur->value << '\n';
-            }
+            std::cout << cur->value << '\n';
             traverse(cur->right);
         }
     }
@@ -70,29 +67,6 @@ public:
 
     int getSize() {
         return size_;
-    }
-
-    T max() {
-        Node *cur = root_;
-        while (cur->right != nullptr && cur->right->right != nullptr) {
-            cur = cur->right;
-        }
-        Node *max = cur->right == nullptr ? cur : cur->right;
-        if (max->left != nullptr) {
-            cur = max->left;
-            while (cur->right != nullptr) {
-                cur = cur->right;
-            }
-            return cur->value;
-        } else {
-            if (cur->left == nullptr) {
-                return cur->value;
-            }
-            while (cur->right != nullptr) {
-                cur = cur->right;
-            }
-            return cur->value;
-        }
     }
 
     void bypass() {

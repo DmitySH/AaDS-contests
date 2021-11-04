@@ -20,7 +20,7 @@ class RBTree {
         }
 
         bool isRed() {
-            return color == 'R';
+            return !isBlack();
         };
     };
 
@@ -89,7 +89,6 @@ private:
             if (cur->left == nil_) {
                 cur->left = new Node{value, 'R', nil_, nil_, cur};
                 fixAfterInsert(cur->left);
-                //                insertFix(cur->left);
                 return;
             }
             insertToEnd(cur->left, value);
@@ -97,55 +96,10 @@ private:
             if (cur->right == nil_) {
                 cur->right = new Node{value, 'R', nil_, nil_, cur};
                 fixAfterInsert(cur->right);
-                //                insertFix(cur->right);
                 return;
             }
             insertToEnd(cur->right, value);
         }
-    }
-
-    void insertFix(Node *k) {
-        Node *u;
-        while (k->parent->color == 'R') {
-            if (k->parent == k->parent->parent->right) {
-                u = k->parent->parent->left;
-                if (u->color == 'R') {
-                    u->color = 'B';
-                    k->parent->color = 'B';
-                    k->parent->parent->color = 'R';
-                    k = k->parent->parent;
-                } else {
-                    if (k == k->parent->left) {
-                        k = k->parent;
-                        rotateRight(k);
-                    }
-                    k->parent->color = 'B';
-                    k->parent->parent->color = 'R';
-                    rotateLeft(k->parent->parent);
-                }
-            } else {
-                u = k->parent->parent->right;
-
-                if (u->color == 'R') {
-                    u->color = 'B';
-                    k->parent->color = 'B';
-                    k->parent->parent->color = 'R';
-                    k = k->parent->parent;
-                } else {
-                    if (k == k->parent->right) {
-                        k = k->parent;
-                        rotateLeft(k);
-                    }
-                    k->parent->color = 'B';
-                    k->parent->parent->color = 'R';
-                    rotateRight(k->parent->parent);
-                }
-            }
-            if (k == root_) {
-                break;
-            }
-        }
-        root_->color = 'B';
     }
 
     void fixAfterInsert(Node *new_node) {
@@ -187,83 +141,99 @@ private:
         root_->color = 'B';
     }
 
-    void fixAfterErase(Node *new_node) {  // TODO
-        while (new_node->isBlack() && new_node != root_) {
+    void fixAfterErase(Node *new_node) {
+        while (new_node != root_ && new_node->isBlack()) {
+            Node *parent = new_node->parent;
+            if (new_node == parent->left) {
+                //                s = x->parent->right;
+                if (parent->right->isRed()) {
+                    parent->right->color = 'B';
+                    parent->color = 'R';
+                    rotateLeft(new_node->parent);
+                    //                    s = x->parent->right;
+                    parent = new_node->parent;
+                }
+
+                if (parent->right->left->isBlack() && (parent->right->right->isBlack())) {
+                    parent->right->color = 'R';
+                    new_node = new_node->parent;
+                } else {
+                    if (parent->right->right->isBlack()) {
+                        parent->right->left->color = 'B';
+                        parent->right->color = 'R';
+                        rotateRight(parent->right);
+                        //                        s = x->parent->right;
+                        parent = new_node->parent;
+                    }
+
+                    parent->right->color = parent->color;
+                    parent->color = 'B';
+                    parent->right->right->color = 'B';
+                    rotateLeft(new_node->parent);
+                    new_node = root_;
+                }
+            } else {
+                //                s = x->parent->left;
+                if (parent->left->isRed()) {
+                    parent->left->color = 'B';
+                    parent->color = 'R';
+                    rotateRight(new_node->parent);
+                    //                    s = x->parent->left;
+                    parent = new_node->parent;
+                }
+
+                if (parent->left->right->isBlack() && parent->left->right->isBlack()) {
+                    parent->left->color = 'R';
+                    new_node = parent;
+                } else {
+                    if (parent->left->left->isBlack()) {
+                        parent->left->right->color = 'B';
+                        parent->left->color = 'R';
+                        rotateLeft(parent->left);
+                        //                        s = x->parent->left;
+                        parent = new_node->parent;
+                    }
+
+                    parent->left->color = parent->color;
+                    parent->color = 'B';
+                    parent->left->left->color = 'B';
+                    rotateRight(new_node->parent);
+                    new_node = root_;
+                }
+            }
         }
+        new_node->color = 'B';
     }
 
     Node *findByValue(Node *cur, ValueType value) {
-        if (!cur) {
-            return nullptr;
+        while (cur != nil_) {
+            if (cur->value == value) {
+                return cur;
+            }
+            if (value >= cur->value) {
+                cur = cur->right;
+            } else {
+                cur = cur->left;
+            }
         }
-
-        if (value == cur->value) {
-            return cur;
-        }
-
-        if (value < cur->value) {
-            return findByValue(cur->left, value);
-        } else {
-            return findByValue(cur->right, value);
-        }
+        return nil_;
     }
 
     Node *subMin(Node *node) {
-        while (node->left) {
+        while (node->left != nil_) {
             node = node->left;
         }
         return node;
     }
 
     Node *subMax(Node *node) {
-        while (node->right) {
+        while (node->right != nil_) {
             node = node->right;
         }
         return node;
     }
 
 public:
-    //    void insert(ValueType key) {
-    //        Node *node = new Node;
-    //        node->parent = nullptr;
-    //        node->value = key;
-    //        node->left = nil_;
-    //        node->right = nil_;
-    //        node->color = 'R';
-    //
-    //        Node *y = nullptr;
-    //        Node *x = this->root_;
-    //
-    //        while (x != nil_) {
-    //            y = x;
-    //            if (node->value < x->value) {
-    //                x = x->left;
-    //            } else {
-    //                x = x->right;
-    //            }
-    //        }
-    //
-    //        node->parent = y;
-    //        if (y == nullptr) {
-    //            root_ = node;
-    //        } else if (node->value < y->value) {
-    //            y->left = node;
-    //        } else {
-    //            y->right = node;
-    //        }
-    //
-    //        if (node->parent == nullptr) {
-    //            node->color = 'B';
-    //            return;
-    //        }
-    //
-    //        if (node->parent->parent == nullptr) {
-    //            return;
-    //        }
-    //
-    //        insertFix(node);
-    //    }
-
     RBTree() {
         size_ = 0;
         nil_ = new Node{0, 'B', nullptr, nullptr, nullptr};
@@ -279,7 +249,7 @@ public:
     }
 
     bool isEmpty() {
-        return root_ == nullptr;
+        return root_ == nil_;
     }
 
     int getSize() {
@@ -311,30 +281,63 @@ public:
     }
     void erase(ValueType value) {
         Node *excluded = findByValue(root_, value);
+        //        std::cout << excluded->value << "Fdsfsdf \n";
+        if (excluded == nil_) {
+            std::cout << "NO no no";
+            return;
+        }
+
+        Node *temp = excluded;
         char color = excluded->color;
 
-        Node *temp;
-        if (!excluded->left) {
-            temp = excluded->right;
-            change(excluded, temp);
-        } else if (!excluded->right) {
-            temp = excluded->left;
-            change(excluded, temp);
+        Node *sub;
+
+        if (excluded->left == nil_) {
+            sub = excluded->right;
+            change(excluded, excluded->right);
+        } else if (excluded->right == nil_) {
+            sub = excluded->left;
+            change(excluded, excluded->left);
         } else {
-            Node *sub_min = subMin(excluded);
-            color = sub_min->color;
-            temp = sub_min->right;
-            if (sub_min == excluded->right || sub_min == excluded->left) {
-                temp->parent = sub_min;
+            temp = subMin(excluded->right);
+            color = temp->color;
+            sub = temp->right;
+            if (temp->parent == excluded) {
+                sub->parent = temp;
             } else {
-                change(sub_min, sub_min->right);
+                change(temp, temp->right);
+                temp->right = excluded->right;
+                temp->right->parent = temp;
             }
-            change(excluded, sub_min);
-            sub_min->color = color;
+
+            change(excluded, temp);
+            temp->left = excluded->left;
+            temp->left->parent = temp;
+            temp->color = excluded->color;
         }
+        //        delete z;
         if (color == 'B') {
-            fixAfterInsert(temp);
+            fixAfterErase(sub);
         }
+        //        Node *temp;
+        //        if (!excluded->left) {
+        //            temp = excluded->right;
+        //            change(excluded, temp);
+        //        } else if (!excluded->right) {
+        //            temp = excluded->left;
+        //            change(excluded, temp);
+        //        } else {
+        //            Node *sub_min = subMin(excluded);
+        //            color = sub_min->color;
+        //            temp = sub_min->right;
+        //            if (sub_min == excluded->right || sub_min == excluded->left) {
+        //                temp->parent = sub_min;
+        //            } else {
+        //                change(sub_min, sub_min->right);
+        //            }
+        //            change(excluded, sub_min);
+        //            sub_min->color = color;
+        //        }
     }
 
     void insert(ValueType value) {
@@ -344,6 +347,121 @@ public:
         } else {
             insertToEnd(root_, value);
         }
+    }
+
+    void deleteNodeHelper(Node *node, ValueType key) {
+        Node *z = nil_;
+        Node *x, *y;
+        while (node != nil_) {
+            if (node->value == key) {
+                z = node;
+            }
+
+            if (node->value <= key) {
+                node = node->right;
+            } else {
+                node = node->left;
+            }
+        }
+
+        if (z == nil_) {
+            std::cout << "Key not found in the tree" << std::endl;
+            return;
+        }
+
+        y = z;
+        char y_original_color = y->color;
+        if (z->left == nil_) {
+            x = z->right;
+            change(z, z->right);
+        } else if (z->right == nil_) {
+            x = z->left;
+            change(z, z->left);
+        } else {
+            y = subMin(z->right);
+            y_original_color = y->color;
+            x = y->right;
+            if (y->parent == z) {
+                x->parent = y;
+            } else {
+                change(y, y->right);
+                y->right = z->right;
+                y->right->parent = y;
+            }
+
+            change(z, y);
+            y->left = z->left;
+            y->left->parent = y;
+            y->color = z->color;
+        }
+        //        delete z;
+        if (y_original_color == 'B') {
+            fixAfterErase(x);
+        }
+    }
+
+    //    void deleteFix(Node* x) {
+    //        Node* s;
+    //        while (x != root_ && x->color == 'B') {
+    //            if (x == x->parent->left) {
+    //                s = x->parent->right;
+    //                if (s->color == 'R') {
+    //                    s->color = 'B';
+    //                    x->parent->color = 'R';
+    //                    rotateLeft(x->parent);
+    //                    s = x->parent->right;
+    //                }
+    //
+    //                if (s->left->color == 'B' && s->right->color == 'B') {
+    //                    s->color = 'R';
+    //                    x = x->parent;
+    //                } else {
+    //                    if (s->right->color == 'B') {
+    //                        s->left->color = 'B';
+    //                        s->color = 'R';
+    //                        rotateRight(s);
+    //                        s = x->parent->right;
+    //                    }
+    //
+    //                    s->color = x->parent->color;
+    //                    x->parent->color = 'B';
+    //                    s->right->color = 'B';
+    //                    rotateLeft(x->parent);
+    //                    x = root_;
+    //                }
+    //            } else {
+    //                s = x->parent->left;
+    //                if (s->color == 'R') {
+    //                    s->color = 'B';
+    //                    x->parent->color = 'R';
+    //                    rotateRight(x->parent);
+    //                    s = x->parent->left;
+    //                }
+    //
+    //                if (s->right->color == 'B' && s->right->color == 'B') {
+    //                    s->color = 'R';
+    //                    x = x->parent;
+    //                } else {
+    //                    if (s->left->color == 'B') {
+    //                        s->right->color = 'B';
+    //                        s->color = 'R';
+    //                        rotateLeft(s);
+    //                        s = x->parent->left;
+    //                    }
+    //
+    //                    s->color = x->parent->color;
+    //                    x->parent->color = 'B';
+    //                    s->left->color = 'B';
+    //                    rotateRight(x->parent);
+    //                    x = root_;
+    //                }
+    //            }
+    //        }
+    //        x->color = 'B';
+    //    }
+
+    void deleteNode(ValueType data) {
+        deleteNodeHelper(this->root_, data);
     }
 };
 
@@ -356,14 +474,27 @@ void input(RBTree<int> *tree) {
     }
 }
 
+void eraser(RBTree<int> *tree) {
+    int inp;
+    std::cin >> inp;
+    while (inp != 0) {
+        tree->erase(inp);
+        tree->printTree();
+        std::cin >> inp;
+    }
+}
+
 int main() {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
 
     RBTree<int> tree;
     input(&tree);
+    tree.printTree();
+
     //    tree.bypass();
     //    tree.erase(38);
+    eraser(&tree);
     tree.printTree();
     return 0;
 }

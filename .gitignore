@@ -6,3 +6,4 @@ cmake-build-release
 cmake-build-asan
 cmake-build-tsan
 tests
+tests_folder

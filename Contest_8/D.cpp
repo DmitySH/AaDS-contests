@@ -10,9 +10,19 @@ class RBTree {
         Node *right;
         Node *parent;
 
-        ~Node() {
-            delete right;
-            delete left;
+        Node() {
+            left = nullptr;
+            right = nullptr;
+            parent = nullptr;
+            color = 'B';
+        }
+
+        Node(ValueType value, char color, Node *left, Node *right, Node *parent) {
+            this->left = left;
+            this->color = color;
+            this->value = value;
+            this->right = right;
+            this->parent = parent;
         }
 
         bool isBlack() {
@@ -21,21 +31,160 @@ class RBTree {
 
         bool isRed() {
             return !isBlack();
-        };
+        }
+
+        bool isNil() {
+            return color == 'B' && parent == nullptr && right == nullptr && left == nullptr;
+        }
     };
 
-private:
-    Node *root_;
-    int size_;
-    Node *nil_;
+public:
+    RBTree() {
+        size_ = 0;
+        nil_ = new Node();
+        root_ = nil_;
+    }
 
-    void traverse(Node *cur) {
-        if (cur != nullptr) {
-            traverse(cur->left);
-            std::cout << cur->value << '\n';
-            traverse(cur->right);
+    RBTree(const RBTree &other) {
+        size_ = other.size_;
+        nil_ = new Node();
+        root_ = nil_;
+        root_ = travelAndCopy(other.root_);
+    }
+
+    RBTree &operator=(const RBTree &other) {
+        if (this == &other) {
+            return *this;
+        }
+
+        size_ = other.size_;
+
+        deleter(root_);
+        delete nil_;
+
+        nil_ = new Node();
+
+        root_ = nil_;
+
+        Node *new_root = travelAndCopy(other.root_);
+
+        root_ = new_root;
+        return *this;
+    }
+
+    ~RBTree() {
+        deleter(root_);
+        delete nil_;
+    }
+
+    bool empty() const {
+        return size_ == 0;
+    }
+
+    size_t size() const {
+        return size_;
+    }
+
+    void insert(const ValueType &value) {
+        if (root_ == nil_) {
+            ++size_;
+            root_ = new Node{value, 'B', nil_, nil_, nullptr};
+        } else {
+            insertToEnd(root_, value);
         }
     }
+
+    void erase(const ValueType &value) {
+        Node *excluded = findByValue(root_, value);
+        if (excluded == nil_) {
+            return;
+        }
+        --size_;
+
+        Node *s_min;
+        char color = excluded->color;
+
+        Node *sub;
+
+        if (excluded->left == nil_) {
+            sub = excluded->right;
+            change(excluded, excluded->right);
+        } else if (excluded->right == nil_) {
+            sub = excluded->left;
+            change(excluded, excluded->left);
+        } else {
+            s_min = subMin(excluded->right);
+            color = s_min->color;
+            sub = s_min->right;
+            if (s_min->parent == excluded) {
+                sub->parent = s_min;
+            } else {
+                change(s_min, s_min->right);
+                s_min->right = excluded->right;
+                s_min->right->parent = s_min;
+            }
+
+            change(excluded, s_min);
+            s_min->left = excluded->left;
+            s_min->left->parent = s_min;
+            s_min->color = excluded->color;
+        }
+        excluded->left = nullptr;
+        excluded->right = nullptr;
+        delete excluded;
+        if (color == 'B') {
+            fixAfterErase(sub);
+        }
+    }
+
+    ValueType *lower_bound(const ValueType &value) const {  // NOLINT
+        Node *cur = root_;
+        Node *prev = nullptr;
+
+        while (cur != nil_) {
+            prev = cur;
+            if (value < cur->value) {
+                cur = cur->left;
+            } else {
+                cur = cur->right;
+            }
+        }
+
+        while (prev && prev->value < value) {
+            prev = prev->parent;
+        }
+        return prev == nullptr ? nullptr : &(prev->value);
+    }
+
+    ValueType *find(const ValueType &value) const {
+        Node *node = findByValue(root_, value);
+        if (node == nil_) {
+            return nullptr;
+        } else {
+            return &(node->value);
+        }
+    }
+
+    ValueType *traversal() const {
+        ValueType *ar = new ValueType[size_];
+        int *index = new int(0);
+        traveller(root_, ar, index);
+        delete index;
+        return ar;
+    }
+
+private:
+    void deleter(Node *cur) {
+        if (cur != nil_) {
+            deleter(cur->right);
+            deleter(cur->left);
+            delete cur;
+        }
+    }
+
+    Node *root_;
+    size_t size_;
+    Node *nil_;
 
     void rotateLeft(Node *pivot) {
         Node *temp = pivot->right;
@@ -92,7 +241,7 @@ private:
                 return;
             }
             insertToEnd(cur->left, value);
-        } else if (value > cur->value) {
+        } else if (cur->value < value) {
             if (cur->right == nil_) {
                 cur->right = new Node{value, 'R', nil_, nil_, cur};
                 fixAfterInsert(cur->right);
@@ -103,6 +252,7 @@ private:
     }
 
     void fixAfterInsert(Node *new_node) {
+        ++size_;
         while (new_node != root_ && new_node->parent->isRed()) {
             Node *parent = new_node->parent;
             Node *grand_parent = parent->parent;
@@ -145,12 +295,10 @@ private:
         while (new_node != root_ && new_node->isBlack()) {
             Node *parent = new_node->parent;
             if (new_node == parent->left) {
-                //                s = x->parent->right;
                 if (parent->right->isRed()) {
                     parent->right->color = 'B';
                     parent->color = 'R';
                     rotateLeft(new_node->parent);
-                    //                    s = x->parent->right;
                     parent = new_node->parent;
                 }
 
@@ -162,7 +310,6 @@ private:
                         parent->right->left->color = 'B';
                         parent->right->color = 'R';
                         rotateRight(parent->right);
-                        //                        s = x->parent->right;
                         parent = new_node->parent;
                     }
 
@@ -173,12 +320,10 @@ private:
                     new_node = root_;
                 }
             } else {
-                //                s = x->parent->left;
                 if (parent->left->isRed()) {
                     parent->left->color = 'B';
                     parent->color = 'R';
                     rotateRight(new_node->parent);
-                    //                    s = x->parent->left;
                     parent = new_node->parent;
                 }
 
@@ -190,7 +335,6 @@ private:
                         parent->left->right->color = 'B';
                         parent->left->color = 'R';
                         rotateLeft(parent->left);
-                        //                        s = x->parent->left;
                         parent = new_node->parent;
                     }
 
@@ -205,15 +349,14 @@ private:
         new_node->color = 'B';
     }
 
-    Node *findByValue(Node *cur, ValueType value) {
+    Node *findByValue(Node *cur, ValueType value) const {
         while (cur != nil_) {
-            if (cur->value == value) {
-                return cur;
-            }
-            if (value >= cur->value) {
+            if (cur->value < value) {
                 cur = cur->right;
-            } else {
+            } else if (value < cur->value) {
                 cur = cur->left;
+            } else {
+                return cur;
             }
         }
         return nil_;
@@ -233,268 +376,36 @@ private:
         return node;
     }
 
-public:
-    RBTree() {
-        size_ = 0;
-        nil_ = new Node{0, 'B', nullptr, nullptr, nullptr};
-        root_ = nil_;
-    }
-
-    ~RBTree() {
-        delete root_;
-    }
-
-    void bypass() {
-        traverse(root_);
-    }
-
-    bool isEmpty() {
-        return root_ == nil_;
-    }
-
-    int getSize() {
-        return size_;
-    }
-
-    void printTree() {
-        if (root_) {
-            printHelper(this->root_, "", true);
+    void traveller(Node *cur, ValueType *ar, int *index) const {
+        if (cur != nullptr && cur != nil_) {
+            traveller(cur->left, ar, index);
+            ar[*index] = cur->value;
+            *index += 1;
+            traveller(cur->right, ar, index);
         }
     }
 
-    void printHelper(Node *root, std::string indent, bool last) {
-        if (root != nil_) {
-            std::cout << indent;
-            if (last) {
-                std::cout << "R----";
-                indent += "   ";
-            } else {
-                std::cout << "L----";
-                indent += "|  ";
+    Node *travelAndCopy(Node *other_cur) {
+        if (other_cur != nullptr && !other_cur->isNil()) {
+            Node *cur = new Node{other_cur->value, other_cur->color, nil_, nil_, nullptr};
+
+            Node *temp = travelAndCopy(other_cur->left);
+            cur->left = temp;
+
+            temp = travelAndCopy(other_cur->right);
+
+            cur->right = temp;
+
+            if (!cur->right->isNil()) {
+                cur->right->parent = cur;
             }
 
-            std::string s_color = root->color == 'R' ? "RED" : "BLACK";
-            std::cout << root->value << "(" << s_color << ")" << std ::endl;
-            printHelper(root->left, indent, false);
-            printHelper(root->right, indent, true);
-        }
-    }
-    void erase(ValueType value) {
-        Node *excluded = findByValue(root_, value);
-        //        std::cout << excluded->value << "Fdsfsdf \n";
-        if (excluded == nil_) {
-            std::cout << "NO no no";
-            return;
-        }
-
-        Node *temp = excluded;
-        char color = excluded->color;
-
-        Node *sub;
-
-        if (excluded->left == nil_) {
-            sub = excluded->right;
-            change(excluded, excluded->right);
-        } else if (excluded->right == nil_) {
-            sub = excluded->left;
-            change(excluded, excluded->left);
-        } else {
-            temp = subMin(excluded->right);
-            color = temp->color;
-            sub = temp->right;
-            if (temp->parent == excluded) {
-                sub->parent = temp;
-            } else {
-                change(temp, temp->right);
-                temp->right = excluded->right;
-                temp->right->parent = temp;
+            if (!cur->left->isNil()) {
+                cur->left->parent = cur;
             }
 
-            change(excluded, temp);
-            temp->left = excluded->left;
-            temp->left->parent = temp;
-            temp->color = excluded->color;
+            return cur;
         }
-        //        delete z;
-        if (color == 'B') {
-            fixAfterErase(sub);
-        }
-        //        Node *temp;
-        //        if (!excluded->left) {
-        //            temp = excluded->right;
-        //            change(excluded, temp);
-        //        } else if (!excluded->right) {
-        //            temp = excluded->left;
-        //            change(excluded, temp);
-        //        } else {
-        //            Node *sub_min = subMin(excluded);
-        //            color = sub_min->color;
-        //            temp = sub_min->right;
-        //            if (sub_min == excluded->right || sub_min == excluded->left) {
-        //                temp->parent = sub_min;
-        //            } else {
-        //                change(sub_min, sub_min->right);
-        //            }
-        //            change(excluded, sub_min);
-        //            sub_min->color = color;
-        //        }
-    }
-
-    void insert(ValueType value) {
-        ++size_;
-        if (root_ == nil_) {
-            root_ = new Node{value, 'B', nil_, nil_, nullptr};
-        } else {
-            insertToEnd(root_, value);
-        }
-    }
-
-    void deleteNodeHelper(Node *node, ValueType key) {
-        Node *z = nil_;
-        Node *x, *y;
-        while (node != nil_) {
-            if (node->value == key) {
-                z = node;
-            }
-
-            if (node->value <= key) {
-                node = node->right;
-            } else {
-                node = node->left;
-            }
-        }
-
-        if (z == nil_) {
-            std::cout << "Key not found in the tree" << std::endl;
-            return;
-        }
-
-        y = z;
-        char y_original_color = y->color;
-        if (z->left == nil_) {
-            x = z->right;
-            change(z, z->right);
-        } else if (z->right == nil_) {
-            x = z->left;
-            change(z, z->left);
-        } else {
-            y = subMin(z->right);
-            y_original_color = y->color;
-            x = y->right;
-            if (y->parent == z) {
-                x->parent = y;
-            } else {
-                change(y, y->right);
-                y->right = z->right;
-                y->right->parent = y;
-            }
-
-            change(z, y);
-            y->left = z->left;
-            y->left->parent = y;
-            y->color = z->color;
-        }
-        //        delete z;
-        if (y_original_color == 'B') {
-            fixAfterErase(x);
-        }
-    }
-
-    //    void deleteFix(Node* x) {
-    //        Node* s;
-    //        while (x != root_ && x->color == 'B') {
-    //            if (x == x->parent->left) {
-    //                s = x->parent->right;
-    //                if (s->color == 'R') {
-    //                    s->color = 'B';
-    //                    x->parent->color = 'R';
-    //                    rotateLeft(x->parent);
-    //                    s = x->parent->right;
-    //                }
-    //
-    //                if (s->left->color == 'B' && s->right->color == 'B') {
-    //                    s->color = 'R';
-    //                    x = x->parent;
-    //                } else {
-    //                    if (s->right->color == 'B') {
-    //                        s->left->color = 'B';
-    //                        s->color = 'R';
-    //                        rotateRight(s);
-    //                        s = x->parent->right;
-    //                    }
-    //
-    //                    s->color = x->parent->color;
-    //                    x->parent->color = 'B';
-    //                    s->right->color = 'B';
-    //                    rotateLeft(x->parent);
-    //                    x = root_;
-    //                }
-    //            } else {
-    //                s = x->parent->left;
-    //                if (s->color == 'R') {
-    //                    s->color = 'B';
-    //                    x->parent->color = 'R';
-    //                    rotateRight(x->parent);
-    //                    s = x->parent->left;
-    //                }
-    //
-    //                if (s->right->color == 'B' && s->right->color == 'B') {
-    //                    s->color = 'R';
-    //                    x = x->parent;
-    //                } else {
-    //                    if (s->left->color == 'B') {
-    //                        s->right->color = 'B';
-    //                        s->color = 'R';
-    //                        rotateLeft(s);
-    //                        s = x->parent->left;
-    //                    }
-    //
-    //                    s->color = x->parent->color;
-    //                    x->parent->color = 'B';
-    //                    s->left->color = 'B';
-    //                    rotateRight(x->parent);
-    //                    x = root_;
-    //                }
-    //            }
-    //        }
-    //        x->color = 'B';
-    //    }
-
-    void deleteNode(ValueType data) {
-        deleteNodeHelper(this->root_, data);
+        return nil_;
     }
 };
-
-void input(RBTree<int> *tree) {
-    int inp;
-    std::cin >> inp;
-    while (inp != 0) {
-        tree->insert(inp);
-        std::cin >> inp;
-    }
-}
-
-void eraser(RBTree<int> *tree) {
-    int inp;
-    std::cin >> inp;
-    while (inp != 0) {
-        tree->erase(inp);
-        tree->printTree();
-        std::cin >> inp;
-    }
-}
-
-int main() {
-    std::ios_base::sync_with_stdio(false);
-    std::cin.tie(nullptr);
-
-    RBTree<int> tree;
-    input(&tree);
-    tree.printTree();
-
-    //    tree.bypass();
-    //    tree.erase(38);
-    eraser(&tree);
-    tree.printTree();
-    return 0;
-}

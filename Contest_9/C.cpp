@@ -6,6 +6,7 @@ public:
     Node *left;
     Node *right;
     Node *parent;
+    int height;
 
     ~Node() {
         delete right;
@@ -33,7 +34,7 @@ public:
 
     void insert(int value) {
         if (!root_) {
-            root_ = new Node{value, nullptr, nullptr, nullptr};
+            root_ = new Node{value, nullptr, nullptr, nullptr, 0};
             return;
         }
 
@@ -41,13 +42,15 @@ public:
         while (cur) {
             if (cur->key < value) {
                 if (!cur->right) {
-                    cur->right = new Node{value, nullptr, nullptr, cur};
+                    cur->right = new Node{value, nullptr, nullptr, cur, 0};
+                    reDepth(cur);
                     return;
                 }
                 cur = cur->right;
             } else if (value < cur->key) {
                 if (!cur->left) {
-                    cur->left = new Node{value, nullptr, nullptr, cur};
+                    cur->left = new Node{value, nullptr, nullptr, cur, 0};
+                    reDepth(cur);
                     return;
                 }
                 cur = cur->left;
@@ -108,26 +111,11 @@ public:
     }
 
     int getHeight() const {
-        int depth = traverse(root_) - 1;
-        return depth < 0 ? 0 : depth;
+        return root_->height;
     }
 
 private:
     Node *root_;
-
-    int traverse(Node *cur) const {
-        int left;
-        int right;
-        int height = 0;
-
-        if (cur) {
-            left = traverse(cur->left);
-            right = traverse(cur->right);
-            height = ((left > right) ? left : right) + 1;
-        }
-
-        return height;
-    }
 
     void zag(Node *pivot) {
         Node *temp = pivot->right;
@@ -140,6 +128,9 @@ private:
         change(pivot, temp);
         temp->left = pivot;
         pivot->parent = temp;
+
+        depth(pivot);
+        depth(temp);
     }
 
     void zig(Node *pivot) {
@@ -153,6 +144,29 @@ private:
         change(pivot, temp);
         temp->right = pivot;
         pivot->parent = temp;
+
+        depth(pivot);
+        depth(temp);
+    }
+
+    void depth(Node *cur) {
+        if (!cur->left && !cur->right) {
+            cur->height = 0;
+            return;
+        }
+        if (!cur->left) {
+            cur->height = cur->right->height + 1;
+            return;
+        }
+        if (!cur->right) {
+            cur->height = cur->left->height + 1;
+            return;
+        }
+        if (cur->left->height > cur->right->height) {
+            cur->height = cur->left->height + 1;
+        } else {
+            cur->height = cur->right->height + 1;
+        }
     }
 
     void change(Node *first, Node *second) {
@@ -164,5 +178,12 @@ private:
             first->parent->right = second;
         }
         second->parent = first->parent;
+    }
+
+    void reDepth(Node *cur) {
+        while (cur) {
+            depth(cur);
+            cur = cur->parent;
+        }
     }
 };

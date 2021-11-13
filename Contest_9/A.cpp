@@ -1,188 +1,199 @@
 #include <iostream>
-#include <string>
 
-template <typename T>
-class BinarySearchTree {
-    struct Pair {
-        T max, min;
-    };
+struct Node {
+    int *values;
+    int step;
+    Node **children;
+    int size;
+    bool leaf;
+    int fact_size;
 
-    struct Node {
-    public:
-        T value;
-        Node *right;
-        Node *left;
-        char color;
-        int left_number, right_number;
-
-        ~Node() {
-            delete right;
-            delete left;
-        }
-
-        Node(T value, char color, int left_num, int right_num) {
-            this->color = color;
-            this->value = value;
-            this->left_number = left_num;
-            this->right_number = right_num;
-        }
-    };
-
-private:
-    Node *root_;
-    bool is_rb_;
-    int blacks_;
-    Node **node_array_;
-
-    int myMax(int num_left, int num_right) {
-        if (num_left > num_right) {
-            return num_left;
-        } else {
-            return num_right;
-        }
+    Node(int value, int step, bool leaf) : Node(step, leaf) {
+        size = 1;
+        values[0] = value;
     }
-    int myMin(int num_left, int num_right) {
-        if (num_left > num_right) {
-            return num_right;
-        } else {
-            return num_left;
+
+    ~Node() {
+        for (int i = 0; i < fact_size; ++i) {
+            delete children[i];
+        }
+        delete[] values;
+        delete[] children;
+    }
+
+    Node(int step, bool leaf) {
+        fact_size = 0;
+        size = 0;
+        this->step = step;
+        this->leaf = leaf;
+        values = new int[2 * step - 1];
+        children = new Node *[2 * step];
+
+        for (int i = 0; i < 2 * step; ++i) {
+            children[i] = nullptr;
         }
     }
 
-    void createTree(Node *cur) {
-        if (cur) {
-            if (cur->right_number == -1) {
-                cur->right = nullptr;
+    bool full() {
+        return size == 2 * step - 1;
+    }
+
+    int64_t summer() const {
+        int counter;
+        int64_t sum = 0;
+        for (counter = 0; counter < size; ++counter) {
+            if (!leaf) {
+                sum += children[counter]->summer();
             } else {
-                cur->right = node_array_[cur->right_number];
+                sum += values[counter];
             }
-
-            if (cur->left_number == -1) {
-                cur->left = nullptr;
-            } else {
-                cur->left = node_array_[cur->left_number];
-            }
-            createTree(cur->right);
-            createTree(cur->left);
         }
-    }
-
-    Pair checkRB(Node *cur, int black_before) {
-        if (cur != nullptr) {
-            if (cur->color == 'B') {
-                ++black_before;
-            }
-
-            Pair values_left = checkRB(cur->left, black_before);
-            Pair values_right = checkRB(cur->right, black_before);
-
-            if (cur->right != nullptr) {
-                if (values_right.min <= cur->value ||
-                    cur->right->color == 'R' && cur->color != 'B') {
-                    is_rb_ = false;
-                }
-            }
-
-            if (cur->color != 'R' && cur->color != 'B') {
-                is_rb_ = false;
-            }
-
-            if (cur->left != nullptr) {
-                if (values_left.max >= cur->value || cur->left->color == 'R' && cur->color != 'B') {
-                    is_rb_ = false;
-                }
-            }
-
-            return Pair{myMax(myMax(values_right.max, cur->value), values_left.max),
-                        myMin(myMin(values_right.min, cur->value), values_left.min)};
-
-        } else {
-            if (blacks_ == 0) {
-                blacks_ = black_before;
-            } else if (blacks_ != black_before) {
-                is_rb_ = false;
-            }
-            return Pair{INT32_MIN, INT32_MAX};
-        }
-    }
-
-public:
-    BinarySearchTree() {
-        root_ = nullptr;
-        is_rb_ = true;
-        blacks_ = 0;
-    }
-
-    ~BinarySearchTree() {
-        delete root_;
-        delete[] node_array_;
-    }
-
-    bool isRBtree() {
-        is_rb_ = true;
-        if (root_->color != 'B') {
-            return false;
-        }
-        blacks_ = 0;
-        checkRB(root_, blacks_);
-        return is_rb_;
-    }
-
-    void traverse(Node *cur) {
-        if (cur != nullptr) {
-            traverse(cur->left);
-            std::cout << cur->value << '\n';
-            traverse(cur->right);
-        }
-    }
-
-    void bypass() {
-        traverse(root_);
-    }
-
-    void createFromInput(int number_of_nodes) {
-        int root;
-        std::cin >> root;
-        node_array_ = new Node *[number_of_nodes];
-        --root;
-
-        for (int i = 0; i < number_of_nodes; ++i) {
-            node_array_[i] = nullptr;
+        if (!leaf) {
+            sum += children[counter]->summer();
         }
 
-        for (int i = 0; i < number_of_nodes; ++i) {
-            int number;
-            T key;
-            std::string left, right;
-            char color;
-            std::cin >> number >> key >> left >> right >> color;
-
-            int left_number = left == "null" ? -1 : std::stoi(left) - 1;
-            int right_number = right == "null" ? -1 : std::stoi(right) - 1;
-
-            node_array_[number - 1] = new Node(key, color, left_number, right_number);
-        }
-        createTree(node_array_[root]);
-        root_ = node_array_[root];
+        return sum;
     }
 };
 
-int main() {
-    std::ios_base::sync_with_stdio(false);
-    std::cin.tie(nullptr);
+class BTree {
+public:
+    explicit BTree(int step) {
+        size_ = 0;
+        root_ = nullptr;
+        t_ = step;
+    }
 
-    int number_of_nodes;
-    std::cin >> number_of_nodes;
-    if (number_of_nodes == 0) {
-        std::cout << "YES";
+    ~BTree() {
+        delete root_;
+    }
+
+    void insert(int value) {
+        if (!root_) {
+            ++size_;
+            root_ = new Node(value, t_, true);
+        } else {
+            if (search(root_, value)) {
+                return;
+            }
+            if (root_->full()) {
+                ++size_;
+                Node *upper_node = new Node(t_, false);
+                upper_node->children[0] = root_;
+
+                split(upper_node, root_, 0);
+
+                ++upper_node->fact_size;
+
+                int index = upper_node->values[0] < value ? 1 : 0;
+
+                deepInsert(upper_node->children[index], value);
+                root_ = upper_node;
+            } else {
+                deepInsert(root_, value);
+            }
+        }
+    }
+
+    size_t size() const {
+        return size_;
+    }
+
+    int64_t sum() const {
+        if (root_) {
+            return root_->summer();
+        }
         return 0;
     }
-    BinarySearchTree<int> tree;
-    tree.createFromInput(number_of_nodes);
-    if (tree.isRBtree()) {
-        std::cout << "YES";
-    } else {
-        std::cout << "NO";
+
+private:
+    int t_;
+    size_t size_;
+    Node *root_;
+
+    bool search(Node *node, int value) {
+        int index;
+        if (!node) {
+            return false;
+        }
+        for (index = 0; index < node->size; ++index) {
+            if (value < node->values[index]) {
+                break;
+            }
+            if (value == node->values[index]) {
+                return true;
+            }
+        }
+        if (node->leaf) {
+            return false;
+        } else {
+            return search(node->children[index], value);
+        }
     }
-    return 0;
-}
+
+    void deepInsert(Node *node, int value) {
+        int counter = node->size - 1;
+
+        if (!node->leaf) {
+            while (counter >= 0 && value < node->values[counter]) {
+                --counter;
+            }
+            ++counter;
+
+            Node *tmp = node->children[counter];
+            if (tmp->full()) {
+                split(node, tmp, counter);
+                if (node->values[counter] < value) {
+                    ++counter;
+                }
+            }
+            deepInsert(node->children[counter], value);
+        } else {
+            for (counter = node->size - 1; counter >= 0; --counter) {
+                if (value > node->values[counter]) {
+                    break;
+                }
+                node->values[counter + 1] = node->values[counter];
+            }
+            node->values[counter + 1] = value;
+            ++node->size;
+        }
+    }
+
+    void split(Node *parent, Node *child, int child_index) {
+        ++size_;
+
+        Node *right = new Node(child->step, child->leaf);
+
+        int step = parent->step;
+        right->size = step - 1;
+        child->size = step - 1;
+
+        right->fact_size = step;
+        child->fact_size = step;
+        ++parent->fact_size;
+
+        for (int j = 0; j < parent->step - 1; ++j) {
+            right->values[j] = child->values[j + parent->step];
+        }
+
+        if (!child->leaf) {
+            for (int j = 0; j < parent->step; ++j) {
+                right->children[j] = child->children[j + parent->step];
+            }
+        }
+
+        for (int j = parent->size; j >= child_index + 1; --j) {
+            parent->children[j + 1] = parent->children[j];
+        }
+
+        parent->children[child_index + 1] = right;
+
+        for (int j = parent->size - 1; j >= child_index; --j) {
+            parent->values[j + 1] = parent->values[j];
+        }
+
+        parent->values[child_index] = child->values[parent->step - 1];
+        parent->size++;
+    }
+};

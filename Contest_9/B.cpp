@@ -131,18 +131,7 @@ private:
         right->size = t_ - 1;
         cur->size = t_ - 1;
 
-        for (int i = 0; i < t_ - 1; ++i) {
-            right->values[i] = cur->values[i + t_];
-            right->children[i] = cur->children[i + t_];
-            if (right->children[i]) {
-                right->children[i]->parent = right;
-            }
-        }
-
-        right->children[t_ - 1] = cur->children[2 * t_ - 1];
-        if (right->children[t_ - 1]) {
-            right->children[t_ - 1]->parent = right;
-        }
+        fillRight(cur, right);
 
         if (cur->leaf) {
             right->leaf = true;
@@ -158,26 +147,45 @@ private:
         if (cur == root_) {
             newRoot(cur, right, mid);
         } else {
-            right->parent = cur->parent;
+            addNotToRoot(cur, right, mid);
+        }
+    }
 
-            int index = 0;
-            while (index < cur->parent->size && cur->parent->values[index] < mid) {
-                ++index;
+    void fillRight(const Node *cur, Node *right) const {
+        for (int i = 0; i < t_ - 1; ++i) {
+            right->values[i] = cur->values[i + t_];
+            right->children[i] = cur->children[i + t_];
+            if (right->children[i]) {
+                right->children[i]->parent = right;
             }
+        }
 
-            cur->parent->children[cur->parent->size + 1] = cur->parent->children[cur->parent->size];
-            for (int i = cur->parent->size; i > index; --i) {
-                cur->parent->values[i] = cur->parent->values[i - 1];
-                cur->parent->children[i] = cur->parent->children[i - 1];
-            }
-            cur->parent->values[index] = mid;
-            ++cur->parent->size;
-            cur->parent->children[index] = cur;
-            cur->parent->children[index + 1] = right;
+        right->children[t_ - 1] = cur->children[2 * t_ - 1];
+        if (right->children[t_ - 1]) {
+            right->children[t_ - 1]->parent = right;
+        }
+    }
 
-            if (cur->parent->full()) {
-                split(cur->parent);
-            }
+    void addNotToRoot(Node *cur, Node *right, int mid) {
+        right->parent = cur->parent;
+
+        int index = 0;
+        while (index < cur->parent->size && cur->parent->values[index] < mid) {
+            ++index;
+        }
+
+        cur->parent->children[cur->parent->size + 1] = cur->parent->children[cur->parent->size];
+        for (int i = cur->parent->size; i > index; --i) {
+            cur->parent->values[i] = cur->parent->values[i - 1];
+            cur->parent->children[i] = cur->parent->children[i - 1];
+        }
+        cur->parent->values[index] = mid;
+        ++cur->parent->size;
+        cur->parent->children[index] = cur;
+        cur->parent->children[index + 1] = right;
+
+        if (cur->parent->full()) {
+            split(cur->parent);
         }
     }
 

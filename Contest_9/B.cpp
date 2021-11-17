@@ -1,114 +1,192 @@
 #include <iostream>
 
-template <typename T>
-class BinarySearchTree {
-    struct Node {
-    public:
-        T value;
-        Node *right;
-        Node *left;
+struct Node {
+    int *values;
+    int step;
+    Node **children;
+    int size;
+    bool leaf;
+    Node *right;
+    Node *parent;
 
-        ~Node() {
-            delete right;
-            delete left;
+    Node(int value, int step, bool leaf) : Node(step, leaf) {
+        size = 1;
+        values[0] = value;
+    }
+
+    ~Node() {
+        for (int i = 0; i <= size; ++i) {
+            delete children[i];
         }
-    };
+        delete[] values;
+        delete[] children;
+    }
 
-private:
-    Node *root_;
-    int size_;
-    int depth_;
-    bool balanced_;
+    Node(int step, bool leaf) {
+        size = 0;
+        this->step = step;
+        this->leaf = leaf;
+        values = new int[2 * step - 1];
+        children = new Node *[2 * step];
 
-    void insertValue(Node *cur, T value, int depth) {
-        ++depth;
-        if (value < cur->value) {
-            if (!cur->left) {
-                if (depth > depth_) {
-                    depth_ = depth;
-                }
-                cur->left = new Node{value, nullptr, nullptr};
-            } else {
-                insertValue(cur->left, value, depth);
-            }
-        } else if (value > cur->value) {
-            if (!cur->right) {
-                if (depth > depth_) {
-                    depth_ = depth;
-                }
-                cur->right = new Node{value, nullptr, nullptr};
-            } else {
-                insertValue(cur->right, value, depth);
+        for (int i = 0; i < 2 * step; ++i) {
+            children[i] = nullptr;
+        }
+
+        right = nullptr;
+    }
+
+    bool full() {
+        return size == 2 * step - 1;
+    }
+
+    bool contains(int value) {
+        for (int i = 0; i < 2 * step - 1; ++i) {
+            if (values[i] == value) {
+                return true;
             }
         }
-    }
 
-    int traverse(Node *cur) {
-        if (cur != nullptr) {
-            int left = traverse(cur->left);
-            int right = traverse(cur->right);
-            if (right - left > 1 || left - right > 1) {
-                balanced_ = false;
-            }
-            if (left < right) {
-                return right + 1;
-            } else {
-                return left + 1;
-            }
-        } else {
-            return 0;
-        }
-    }
-
-public:
-    BinarySearchTree() {
-        size_ = 0;
-        root_ = nullptr;
-        balanced_ = true;
-        depth_ = 0;
-    }
-
-    ~BinarySearchTree() {
-        delete root_;
-    }
-
-    bool isBalanced() {
-        balanced_ = true;
-        traverse(root_);
-        return balanced_;
-    }
-
-    void insert(T value) {
-        ++size_;
-        if (!root_) {
-            ++depth_;
-            root_ = new Node{value, nullptr, nullptr};
-        } else {
-            insertValue(root_, value, 1);
-        }
+        return false;
     }
 };
 
-void input(BinarySearchTree<int> *tree) {
-    int inp;
-    std::cin >> inp;
-    while (inp != 0) {
-        tree->insert(inp);
-        std::cin >> inp;
+class BPlusTree {
+public:
+    explicit BPlusTree(int step) {
+        t_ = step;
+        root_ = nullptr;
     }
-}
 
-int main() {
-    std::ios_base::sync_with_stdio(false);
-    std::cin.tie(nullptr);
-
-    BinarySearchTree<int> tree;
-    input(&tree);
-
-    if (tree.isBalanced()) {
-        std::cout << "YES";
-    } else {
-        std::cout << "NO";
+    ~BPlusTree() {
+        delete root_;
     }
-    return 0;
-}
+
+    void insert(int value) {
+        Node *cur;
+        if (!root_) {
+            root_ = new Node(value, t_, true);
+        } else {
+            cur = findLeaf(value, root_);
+
+            if (cur->full()) {
+                split(cur);
+            }
+
+            cur = findLeaf(value, root_);
+
+            if (cur->contains(value)) {
+                return;
+            }
+
+            int index = 0;
+            while (index < cur->size && cur->values[index] < value) {
+                ++index;
+            }
+
+            for (int i = cur->size; i > index; --i) {
+                cur->values[i] = cur->values[i - 1];
+            }
+            cur->values[index] = value;
+            ++cur->size;
+        }
+    }
+    Node *findLeaf(int value, Node *cur) const {
+        while (!cur->leaf) {
+            int index = 0;
+            while (index < cur->size && cur->values[index] < value) {
+                ++index;
+            }
+
+            cur = cur->children[index];
+        }
+        return cur;
+    }
+
+    void printLeaves() const {
+        Node *cur = root_;
+        while (!cur->leaf) {
+            cur = cur->children[0];
+        }
+        while (cur) {
+            for (int i = 0; i < cur->size; ++i) {
+                std::cout << cur->values[i] << ' ';
+            }
+            cur = cur->right;
+            std::cout << '\n';
+        }
+    }
+
+private:
+    int t_;
+    Node *root_;
+
+    void split(Node *cur) {
+        Node *right = new Node(t_, false);
+
+        right->right = cur->right;
+        cur->right = right;
+
+        int mid = cur->values[t_ - 1];
+        right->size = t_ - 1;
+        cur->size = t_ - 1;
+
+        for (int i = 0; i < t_ - 1; ++i) {
+            right->values[i] = cur->values[i + t_];
+            right->children[i] = cur->children[i + t_];
+            if (right->children[i]) {
+                right->children[i]->parent = right;
+            }
+        }
+
+        right->children[t_ - 1] = cur->children[2 * t_ - 1];
+        if (right->children[t_ - 1]) {
+            right->children[t_ - 1]->parent = right;
+        }
+
+        if (cur->leaf) {
+            right->leaf = true;
+
+            for (int i = right->size; i > 0; --i) {
+                right->values[i] = right->values[i - 1];
+            }
+
+            right->values[0] = mid;
+            ++right->size;
+        }
+
+        if (cur == root_) {
+            newRoot(cur, right, mid);
+        } else {
+            right->parent = cur->parent;
+
+            int index = 0;
+            while (index < cur->parent->size && cur->parent->values[index] < mid) {
+                ++index;
+            }
+
+            cur->parent->children[cur->parent->size + 1] = cur->parent->children[cur->parent->size];
+            for (int i = cur->parent->size; i > index; --i) {
+                cur->parent->values[i] = cur->parent->values[i - 1];
+                cur->parent->children[i] = cur->parent->children[i - 1];
+            }
+            cur->parent->values[index] = mid;
+            ++cur->parent->size;
+            cur->parent->children[index] = cur;
+            cur->parent->children[index + 1] = right;
+
+            if (cur->parent->full()) {
+                split(cur->parent);
+            }
+        }
+    }
+
+    void newRoot(Node *cur, Node *right, int mid) {
+        root_ = new Node(mid, t_, false);
+        root_->children[0] = cur;
+        root_->children[1] = right;
+
+        cur->parent = root_;
+        right->parent = root_;
+    }
+};

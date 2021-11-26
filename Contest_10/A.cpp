@@ -13,8 +13,7 @@ struct Node {
         next_ = nullptr;
     }
 
-    ~Node() {
-    }
+    ~Node() = default;
 
     void deleteList() {
         Node *cur = this->next_;
@@ -75,21 +74,26 @@ public:
 
     void insert(KeyType key, ValueType value) {
         size_t hash = hasher_(key) % capacity_;
-        ++size_;
 
         if (!values_[hash]) {
             values_[hash] = new Node<KeyType, ValueType>(key, value);
+            ++size_;
         } else {
             Node<KeyType, ValueType> *cur = values_[hash];
             while (cur->next_) {
                 if (cur->key_ == key) {
                     cur->value_ = value;
-                    --size_;
                     return;
                 }
                 cur = cur->next_;
             }
 
+            if (cur->key_ == key) {
+                cur->value_ = value;
+                return;
+            }
+
+            ++size_;
             cur->next_ = new Node<KeyType, ValueType>(key, value);
         }
 
@@ -101,23 +105,17 @@ public:
     ValueType *find(KeyType key) {
         size_t hash = hasher_(key) % capacity_;
         Node<KeyType, ValueType> *cur = values_[hash];
-        while (cur && cur->key_ != key) {
+        while (cur) {
+            if (cur->key_ == key) {
+                return &(cur->value_);
+            }
             cur = cur->next_;
         }
-
-        if (cur) {
-            return &(cur->value_);
-        }
-
         return nullptr;
     }
 
     void erase(KeyType key) {
         size_t hash = hasher_(key) % capacity_;
-        //        size_t hash = hasher_(key);
-        //        if (hash < 0 || hash >= capacity_) {
-        //            return;
-        //        }
 
         Node<KeyType, ValueType> *cur = values_[hash];
 
@@ -127,19 +125,19 @@ public:
 
         if (cur->key_ == key) {
             Node<KeyType, ValueType> *to_del = values_[hash];
-            values_[hash] = cur->next_;
+            values_[hash] = values_[hash]->next_;
             delete to_del;
             --size_;
         } else {
-            while (cur->next_ && cur->next_->key_ != key) {
+            while (cur->next_) {
+                if (cur->next_->key_ == key) {
+                    Node<KeyType, ValueType> *to_del = cur->next_;
+                    cur->next_ = cur->next_->next_;
+                    delete to_del;
+                    --size_;
+                    return;
+                }
                 cur = cur->next_;
-            }
-
-            if (cur->next_) {
-                Node<KeyType, ValueType> *to_del = cur->next_;
-                cur->next_ = cur->next_->next_;
-                delete to_del;
-                --size_;
             }
         }
     }
@@ -152,8 +150,6 @@ public:
         if (!values_[hash]) {
             throw std::runtime_error("Error");
         }
-
-        //        throw std::invalid_argument("f");
 
         return *(values_[hash]);
     }
@@ -179,7 +175,7 @@ private:
 
     void reHash() {
         size_t prev_capacity = capacity_;
-        capacity_ *= 2;
+        capacity_ = capacity_ + capacity_;
         Node<KeyType, ValueType> **prev_table = values_;
         values_ = new Node<KeyType, ValueType> *[capacity_];
 
@@ -215,19 +211,3 @@ private:
         delete[] prev_table;
     }
 };
-//
-// int main() {
-//    HashTable<std::string, int> table;
-//
-//    std::cout << table.capacity() << std::endl;
-//    std::cout << table.size() << std::endl;
-//
-//    table.insert("hello", 5);
-//    table.insert("hllo", 2);
-//    table.insert("helfslo", 5);
-//    table.insert("lo", 115);
-//
-//    //    table.at(49).value_ = 123;
-//    //    std::cout << table.at(49).value_;
-//    return 0;
-//}

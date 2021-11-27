@@ -7,3 +7,4 @@ cmake-build-asan
 cmake-build-tsan
 tests
 tests_folder
+Data structures

@@ -1,6 +1,416 @@
 #include <iostream>
 #include <string>
 
+template <class ValueType>
+class RBTree {
+    struct Node {
+    public:
+        ValueType value;
+        char color;
+        Node *left;
+        Node *right;
+        Node *parent;
+
+        Node() {
+            left = nullptr;
+            right = nullptr;
+            parent = nullptr;
+            color = 'B';
+        }
+
+        Node(ValueType value, char color, Node *left, Node *right, Node *parent) {
+            this->left = left;
+            this->color = color;
+            this->value = value;
+            this->right = right;
+            this->parent = parent;
+        }
+
+        bool isBlack() {
+            return color == 'B';
+        }
+
+        bool isRed() {
+            return !isBlack();
+        }
+
+        bool isNil() {
+            return color == 'B' && parent == nullptr && right == nullptr && left == nullptr;
+        }
+    };
+
+public:
+    RBTree() {
+        size_ = 0;
+        nil_ = new Node();
+        root_ = nil_;
+    }
+
+    RBTree(const RBTree &other) {
+        size_ = other.size_;
+        nil_ = new Node();
+        root_ = nil_;
+        root_ = travelAndCopy(other.root_);
+    }
+
+    RBTree &operator=(const RBTree &other) {
+        if (this == &other) {
+            return *this;
+        }
+
+        size_ = other.size_;
+
+        deleter(root_);
+        delete nil_;
+
+        nil_ = new Node();
+
+        root_ = nil_;
+
+        Node *new_root = travelAndCopy(other.root_);
+
+        root_ = new_root;
+        return *this;
+    }
+
+    ~RBTree() {
+        deleter(root_);
+        delete nil_;
+    }
+
+    bool empty() const {
+        return size_ == 0;
+    }
+
+    size_t size() const {
+        return size_;
+    }
+
+    void insert(const ValueType &value) {
+        if (root_ == nil_) {
+            ++size_;
+            root_ = new Node{value, 'B', nil_, nil_, nullptr};
+        } else {
+            insertToEnd(root_, value);
+        }
+    }
+
+    void erase(const ValueType &value) {
+        Node *excluded = findByValue(root_, value);
+        if (excluded == nil_) {
+            return;
+        }
+        --size_;
+
+        Node *s_min;
+        char color = excluded->color;
+
+        Node *sub;
+
+        if (excluded->left == nil_) {
+            sub = excluded->right;
+            change(excluded, excluded->right);
+        } else if (excluded->right == nil_) {
+            sub = excluded->left;
+            change(excluded, excluded->left);
+        } else {
+            s_min = subMin(excluded->right);
+            color = s_min->color;
+            sub = s_min->right;
+            if (s_min->parent == excluded) {
+                sub->parent = s_min;
+            } else {
+                change(s_min, s_min->right);
+                s_min->right = excluded->right;
+                s_min->right->parent = s_min;
+            }
+
+            change(excluded, s_min);
+            s_min->left = excluded->left;
+            s_min->left->parent = s_min;
+            s_min->color = excluded->color;
+        }
+        excluded->left = nullptr;
+        excluded->right = nullptr;
+        delete excluded;
+        if (color == 'B') {
+            fixAfterErase(sub);
+        }
+    }
+
+    ValueType *lower_bound(const ValueType &value) const {  // NOLINT
+        Node *cur = root_;
+        Node *prev = nullptr;
+
+        while (cur != nil_) {
+            prev = cur;
+            if (value < cur->value) {
+                cur = cur->left;
+            } else {
+                cur = cur->right;
+            }
+        }
+
+        while (prev && prev->value < value) {
+            prev = prev->parent;
+        }
+        return prev == nullptr ? nullptr : &(prev->value);
+    }
+
+    ValueType *find(const ValueType &value) const {
+        Node *node = findByValue(root_, value);
+        if (node == nil_) {
+            return nullptr;
+        } else {
+            return &(node->value);
+        }
+    }
+
+    ValueType *traversal() const {
+        ValueType *ar = new ValueType[size_];
+        int *index = new int(0);
+        traveller(root_, ar, index);
+        delete index;
+        return ar;
+    }
+
+private:
+    void deleter(Node *cur) {
+        if (cur != nil_) {
+            deleter(cur->right);
+            deleter(cur->left);
+            delete cur;
+        }
+    }
+
+    Node *root_;
+    size_t size_;
+    Node *nil_;
+
+    void rotateLeft(Node *pivot) {
+        Node *temp = pivot->right;
+        pivot->right = temp->left;
+
+        if (temp->left != nil_) {
+            temp->left->parent = pivot;
+        }
+
+        change(pivot, temp);
+        temp->left = pivot;
+        pivot->parent = temp;
+    }
+
+    void rotateRight(Node *pivot) {
+        Node *temp = pivot->left;
+        pivot->left = temp->right;
+
+        if (temp->right != nil_) {
+            temp->right->parent = pivot;
+        }
+
+        change(pivot, temp);
+        temp->right = pivot;
+        pivot->parent = temp;
+    }
+
+    void change(Node *first, Node *second) {
+        if (first->parent == nullptr) {
+            root_ = second;
+        } else if (first == first->parent->left) {
+            first->parent->left = second;
+        } else {
+            first->parent->right = second;
+        }
+        second->parent = first->parent;
+    }
+
+    void rotateBigRight(Node *pivot) {
+        rotateLeft(pivot->left);
+        rotateRight(pivot);
+    }
+
+    void rotateBigLeft(Node *pivot) {
+        rotateRight(pivot->right);
+        rotateLeft(pivot);
+    }
+
+    void insertToEnd(Node *cur, ValueType value) {
+        if (value < cur->value) {
+            if (cur->left == nil_) {
+                cur->left = new Node{value, 'R', nil_, nil_, cur};
+                fixAfterInsert(cur->left);
+                return;
+            }
+            insertToEnd(cur->left, value);
+        } else if (cur->value < value) {
+            if (cur->right == nil_) {
+                cur->right = new Node{value, 'R', nil_, nil_, cur};
+                fixAfterInsert(cur->right);
+                return;
+            }
+            insertToEnd(cur->right, value);
+        }
+    }
+
+    void fixAfterInsert(Node *new_node) {
+        ++size_;
+        while (new_node != root_ && new_node->parent->isRed()) {
+            Node *parent = new_node->parent;
+            Node *grand_parent = parent->parent;
+            if (parent == grand_parent->right) {
+                if (grand_parent->left->isRed()) {
+                    grand_parent->left->color = 'B';
+                    parent->color = 'B';
+                    grand_parent->color = 'R';
+                    new_node = grand_parent;
+                } else {
+                    if (new_node == parent->left) {
+                        new_node = parent;
+                        rotateRight(new_node);
+                    }
+                    new_node->parent->color = 'B';
+                    new_node->parent->parent->color = 'R';
+                    rotateLeft(new_node->parent->parent);
+                }
+            } else {
+                if (grand_parent->right->isRed()) {
+                    grand_parent->right->color = 'B';
+                    parent->color = 'B';
+                    grand_parent->color = 'R';
+                    new_node = grand_parent;
+                } else {
+                    if (new_node == parent->right) {
+                        new_node = parent;
+                        rotateLeft(new_node);
+                    }
+                    new_node->parent->color = 'B';
+                    new_node->parent->parent->color = 'R';
+                    rotateRight(new_node->parent->parent);
+                }
+            }
+        }
+        root_->color = 'B';
+    }
+
+    void fixAfterErase(Node *new_node) {
+        while (new_node != root_ && new_node->isBlack()) {
+            Node *parent = new_node->parent;
+            if (new_node == parent->left) {
+                if (parent->right->isRed()) {
+                    parent->right->color = 'B';
+                    parent->color = 'R';
+                    rotateLeft(new_node->parent);
+                    parent = new_node->parent;
+                }
+
+                if (parent->right->left->isBlack() && (parent->right->right->isBlack())) {
+                    parent->right->color = 'R';
+                    new_node = new_node->parent;
+                } else {
+                    if (parent->right->right->isBlack()) {
+                        parent->right->left->color = 'B';
+                        parent->right->color = 'R';
+                        rotateRight(parent->right);
+                        parent = new_node->parent;
+                    }
+
+                    parent->right->color = parent->color;
+                    parent->color = 'B';
+                    parent->right->right->color = 'B';
+                    rotateLeft(new_node->parent);
+                    new_node = root_;
+                }
+            } else {
+                if (parent->left->isRed()) {
+                    parent->left->color = 'B';
+                    parent->color = 'R';
+                    rotateRight(new_node->parent);
+                    parent = new_node->parent;
+                }
+
+                if (parent->left->right->isBlack() && parent->left->right->isBlack()) {
+                    parent->left->color = 'R';
+                    new_node = parent;
+                } else {
+                    if (parent->left->left->isBlack()) {
+                        parent->left->right->color = 'B';
+                        parent->left->color = 'R';
+                        rotateLeft(parent->left);
+                        parent = new_node->parent;
+                    }
+
+                    parent->left->color = parent->color;
+                    parent->color = 'B';
+                    parent->left->left->color = 'B';
+                    rotateRight(new_node->parent);
+                    new_node = root_;
+                }
+            }
+        }
+        new_node->color = 'B';
+    }
+
+    Node *findByValue(Node *cur, ValueType value) const {
+        while (cur != nil_) {
+            if (cur->value < value) {
+                cur = cur->right;
+            } else if (value < cur->value) {
+                cur = cur->left;
+            } else {
+                return cur;
+            }
+        }
+        return nil_;
+    }
+
+    Node *subMin(Node *node) {
+        while (node->left != nil_) {
+            node = node->left;
+        }
+        return node;
+    }
+
+    Node *subMax(Node *node) {
+        while (node->right != nil_) {
+            node = node->right;
+        }
+        return node;
+    }
+
+    void traveller(Node *cur, ValueType *ar, int *index) const {
+        if (cur != nullptr && cur != nil_) {
+            traveller(cur->left, ar, index);
+            ar[*index] = cur->value;
+            *index += 1;
+            traveller(cur->right, ar, index);
+        }
+    }
+
+    Node *travelAndCopy(Node *other_cur) {
+        if (other_cur != nullptr && !other_cur->isNil()) {
+            Node *cur = new Node{other_cur->value, other_cur->color, nil_, nil_, nullptr};
+
+            Node *temp = travelAndCopy(other_cur->left);
+            cur->left = temp;
+
+            temp = travelAndCopy(other_cur->right);
+
+            cur->right = temp;
+
+            if (!cur->right->isNil()) {
+                cur->right->parent = cur;
+            }
+
+            if (!cur->left->isNil()) {
+                cur->left->parent = cur;
+            }
+
+            return cur;
+        }
+        return nil_;
+    }
+};
+
 // Элемент хеш-таблицы - список объектов с одним хешем
 template <class KeyType, class ValueType>
 struct Node {
@@ -26,193 +436,6 @@ struct Node {
     }
 };
 
-// Хеш-таблица
-template <class KeyType, class ValueType, class Func = std::hash<KeyType>>
-class HashTable {
-public:
-    HashTable() {
-        size_ = 0;
-        capacity_ = 100;
-        fullness_ = 0.5;
-        hasher_ = Func();
-        values_ = new Node<KeyType, ValueType> *[capacity_];
-
-        for (int i = 0; i < capacity_; ++i) {
-            values_[i] = nullptr;
-        }
-    }
-
-    explicit HashTable(Func hasher) : HashTable() {
-        hasher_ = hasher;
-    }
-
-    HashTable(size_t capacity, double fullness, Func hasher = std::hash<KeyType>()) {
-        capacity_ = capacity;
-        hasher_ = hasher;
-        size_ = 0;
-        if (fullness <= 0 || fullness > 1) {
-            fullness_ = 0.5;
-        } else {
-            fullness_ = fullness;
-        }
-
-        values_ = new Node<KeyType, ValueType> *[capacity_];
-        for (int i = 0; i < capacity_; ++i) {
-            values_[i] = nullptr;
-        }
-    }
-
-    ~HashTable() {
-        for (int i = 0; i < capacity_; ++i) {
-            if (values_[i]) {
-                values_[i]->deleteList();
-                delete values_[i];
-            }
-        }
-
-        delete[] values_;
-    }
-
-    void insert(KeyType key, ValueType value) {
-        size_t hash = hasher_(key) % capacity_;
-
-        if (!values_[hash]) {
-            values_[hash] = new Node<KeyType, ValueType>(key, value);
-            ++size_;
-        } else {
-            Node<KeyType, ValueType> *cur = values_[hash];
-            while (cur->next_) {
-                if (cur->key_ == key) {
-                    cur->value_ = value;
-                    return;
-                }
-                cur = cur->next_;
-            }
-
-            if (cur->key_ == key) {
-                cur->value_ = value;
-                return;
-            }
-
-            ++size_;
-            cur->next_ = new Node<KeyType, ValueType>(key, value);
-        }
-
-        if (size_ > capacity_ * fullness_) {
-            reHash();
-        }
-    }
-
-    ValueType *find(KeyType key) {
-        size_t hash = hasher_(key) % capacity_;
-        Node<KeyType, ValueType> *cur = values_[hash];
-        while (cur) {
-            if (cur->key_ == key) {
-                return &(cur->value_);
-            }
-            cur = cur->next_;
-        }
-        return nullptr;
-    }
-
-    void erase(KeyType key) {
-        size_t hash = hasher_(key) % capacity_;
-
-        Node<KeyType, ValueType> *cur = values_[hash];
-
-        if (!cur) {
-            return;
-        }
-
-        if (cur->key_ == key) {
-            Node<KeyType, ValueType> *to_del = values_[hash];
-            values_[hash] = values_[hash]->next_;
-            delete to_del;
-            --size_;
-        } else {
-            while (cur->next_) {
-                if (cur->next_->key_ == key) {
-                    Node<KeyType, ValueType> *to_del = cur->next_;
-                    cur->next_ = cur->next_->next_;
-                    delete to_del;
-                    --size_;
-                    return;
-                }
-                cur = cur->next_;
-            }
-        }
-    }
-
-    Node<KeyType, ValueType> &operator[](uint64_t hash) {
-        if (hash < 0 || hash >= capacity_) {
-            throw std::out_of_range("Error");
-        }
-
-        if (!values_[hash]) {
-            throw std::runtime_error("Error");
-        }
-
-        return *(values_[hash]);
-    }
-
-    Node<KeyType, ValueType> at(uint64_t hash) {
-        return operator[](hash);
-    }
-
-    size_t size() const {
-        return size_;
-    }
-
-    size_t capacity() const {
-        return capacity_;
-    }
-
-private:
-    size_t size_;
-    size_t capacity_;
-    double fullness_;
-    Func hasher_;
-    Node<KeyType, ValueType> **values_;
-
-    void reHash() {
-        size_t prev_capacity = capacity_;
-        capacity_ = capacity_ + capacity_;
-        Node<KeyType, ValueType> **prev_table = values_;
-        values_ = new Node<KeyType, ValueType> *[capacity_];
-
-        for (int i = 0; i < capacity_; ++i) {
-            values_[i] = nullptr;
-        }
-
-        for (int index = 0; index < prev_capacity; ++index) {
-            Node<KeyType, ValueType> *prev = prev_table[index];
-
-            if (prev) {
-                Node<KeyType, ValueType> *to_del = prev;
-                while (prev) {
-                    size_t hash = hasher_(prev->key_) % capacity_;
-
-                    Node<KeyType, ValueType> *new_place = values_[hash];
-                    if (!values_[hash]) {
-                        values_[hash] = new Node<KeyType, ValueType>(prev->key_, prev->value_);
-                    } else {
-                        while (new_place->next_) {
-                            new_place = new_place->next_;
-                        }
-                        new_place->next_ = new Node<KeyType, ValueType>(prev->key_, prev->value_);
-                    }
-
-                    prev = prev->next_;
-                }
-                to_del->deleteList();
-                delete to_del;
-            }
-        }
-
-        delete[] prev_table;
-    }
-};
-
 // основной класс фильтра
 class BloomFilter {
 public:
@@ -234,7 +457,7 @@ public:
 
     // вставка информации об объекте
     void add(const std::string &obj) {
-        real_strings_.insert(obj, true);
+        strings_.insert(obj);
 
         if (test(obj)) {
             return;
@@ -250,7 +473,7 @@ public:
     bool verify(const std::string &obj) {
         ++total_queries_;
         bool in_filter = test(obj);
-        if (in_filter && !real_strings_.find(obj)) {
+        if (in_filter && !strings_.find(obj)) {
             ++fp_;
         }
 
@@ -289,7 +512,7 @@ private:
         return true;
     }
 
-    HashTable<std::string, bool> real_strings_;
+    RBTree<std::string> strings_;
     size_t hashes_count_;
     size_t bits_;
     bool *byte_ar_;

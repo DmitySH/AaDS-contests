@@ -90,7 +90,7 @@ void unite(int first_vertex, int second_vertex, int *parent, int *sizes) {
     }
 }
 
-int kraskal(int edges_count, Edge *edges, int *sizes, int *parents, bool *banned) {
+int kruskal(int edges_count, Edge *edges, int *sizes, int *parents, bool *banned) {
     int total = 0;
     for (int index = 0; index < edges_count; ++index) {
         if (find(edges[index].first_vertex, parents, sizes) !=
@@ -104,7 +104,7 @@ int kraskal(int edges_count, Edge *edges, int *sizes, int *parents, bool *banned
     return total;
 }
 
-int kraskalBanned(int vertex_count, int edges_count, Edge *edges, int *sizes, int *parents,
+int kruskalBanned(int vertex_count, int edges_count, Edge *edges, int *sizes, int *parents,
                   int banned_index) {
     int total = 0;
     for (int index = 0; index < edges_count; ++index) {
@@ -136,6 +136,29 @@ void inputEdges(int mumber, Edge *edges) {
     }
 }
 
+void clearSet(int vertex_count, int *sizes, int *parents) {
+    for (int i = 0; i < vertex_count; ++i) {
+        sizes[i] = 1;
+        parents[i] = i;
+    }
+}
+
+int getSecondMinOstov(int vertex_count, int edges_count, Edge *edges, int *sizes, int *parents,
+                      const bool *banned, int second_min) {
+    for (int index = 0; index < edges_count; ++index) {
+        if (banned[index]) {
+            int weight = kruskalBanned(vertex_count, edges_count, edges, sizes, parents, index);
+            if (weight < second_min) {
+                second_min = weight;
+            }
+
+            clearSet(vertex_count, sizes, parents);
+        }
+    }
+
+    return second_min;
+}
+
 int main() {
     int vertex_count, edges_count;
     std::cin >> vertex_count >> edges_count;
@@ -147,37 +170,20 @@ int main() {
     int *sizes = new int[vertex_count];
     int *parents = new int[vertex_count];
 
-    for (int i = 0; i < vertex_count; ++i) {
-        sizes[i] = 1;
-        parents[i] = i;
-    }
+    clearSet(vertex_count, sizes, parents);
 
     bool *banned = new bool[edges_count];
     for (int i = 0; i < edges_count; ++i) {
         banned[i] = false;
     }
 
-    int first_min = kraskal(edges_count, edges, sizes, parents, banned);
+    int first_min = kruskal(edges_count, edges, sizes, parents, banned);
     int second_min = INT32_MAX;
 
-    for (int j = 0; j < vertex_count; ++j) {
-        sizes[j] = 1;
-        parents[j] = j;
-    }
+    clearSet(vertex_count, sizes, parents);
 
-    for (int index = 0; index < edges_count; ++index) {
-        if (banned[index]) {
-            int weight = kraskalBanned(vertex_count, edges_count, edges, sizes, parents, index);
-            if (weight < second_min) {
-                second_min = weight;
-            }
-
-            for (int j = 0; j < vertex_count; ++j) {
-                sizes[j] = 1;
-                parents[j] = j;
-            }
-        }
-    }
+    second_min =
+        getSecondMinOstov(vertex_count, edges_count, edges, sizes, parents, banned, second_min);
 
     std::cout << first_min << " " << second_min;
 
